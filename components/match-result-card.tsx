@@ -1,13 +1,41 @@
 'use client';
 
+import { useState } from 'react';
 import type { Game, Player } from '@/types';
-import { formatDateTime } from '@/lib/utils';
-import { getInitials, getAvatarColour } from '@/lib/utils';
+import { formatDateTime, getInitials, getAvatarColour, getEloTier } from '@/lib/utils';
 
 interface MatchResultCardProps {
   game: Game;
   userId: string;
   players: Player[];
+}
+
+function TappableAvatar({ player, className }: { player: Player; className?: string }) {
+  const [showName, setShowName] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setShowName(!showName)}
+        className={`rounded-full flex items-center justify-center font-bold ring-2 ring-surface-container-lowest ${className || 'w-7 h-7 text-[10px]'}`}
+        style={{ backgroundColor: getAvatarColour(player.name), color: '#d9ffad' }}
+      >
+        {getInitials(player.name)}
+      </button>
+      {showName && (
+        <div
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-inverse-surface text-inverse-on-surface px-3 py-1.5 rounded-[0.75rem] text-xs font-medium whitespace-nowrap z-20 shadow-lg"
+          onClick={() => setShowName(false)}
+        >
+          <div className="font-bold">{player.name}</div>
+          <div className="text-[10px] opacity-70">{player.elo} ELO · {getEloTier(player.elo)}</div>
+          {/* Tooltip arrow */}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-inverse-surface" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MatchResultCard({ game, userId, players }: MatchResultCardProps) {
@@ -16,7 +44,6 @@ export default function MatchResultCard({ game, userId, players }: MatchResultCa
 
   const myScore = isOnPlayerSide ? game.playerScore : game.opponentScore;
   const theirScore = isOnPlayerSide ? game.opponentScore : game.playerScore;
-  const eloDelta = game.eloChanges[userId] || 0;
 
   const opponentIds = isOnPlayerSide ? game.opponentIds : game.playerIds;
   const partnerIds = isOnPlayerSide
@@ -56,26 +83,23 @@ export default function MatchResultCard({ game, userId, players }: MatchResultCa
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {/* Opponent avatars */}
+          {/* Tappable opponent avatars */}
           <div className="flex -space-x-2">
             {opponentIds.map(id => {
               const p = players.find(pl => pl.id === id);
               if (!p) return null;
-              return (
-                <div
-                  key={id}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ring-2 ring-surface-container-lowest"
-                  style={{ backgroundColor: getAvatarColour(p.name), color: '#d9ffad' }}
-                >
-                  {getInitials(p.name)}
-                </div>
-              );
+              return <TappableAvatar key={id} player={p} />;
             })}
           </div>
           {partnerIds.length > 0 && (
-            <span className="text-xs text-on-surface-variant font-medium">
-              Partner: {partnerIds.map(id => players.find(p => p.id === id)?.name || 'Unknown').join(', ')}
-            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-on-surface-variant font-medium">w/</span>
+              {partnerIds.map(id => {
+                const p = players.find(pl => pl.id === id);
+                if (!p) return null;
+                return <TappableAvatar key={id} player={p} />;
+              })}
+            </div>
           )}
         </div>
         {game.venue && (

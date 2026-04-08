@@ -36,9 +36,24 @@ function PlayerInput({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout>(null);
 
-  const filtered = value.length > 0
-    ? players.filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+  const trimmed = value.trim().toLowerCase();
+  const filtered = trimmed.length > 0
+    ? players.filter(p => p.name.toLowerCase().includes(trimmed))
     : players;
+
+  // Check if the current value matches an existing player
+  const exactMatch = players.find(p => p.name.toLowerCase() === trimmed);
+  const isNewPlayer = trimmed.length > 0 && !exactMatch;
+
+  // On blur, auto-correct to existing player's canonical name if there's a case-insensitive match
+  const handleBlur = () => {
+    timeoutRef.current = setTimeout(() => {
+      setShowSuggestions(false);
+      if (exactMatch && value !== exactMatch.name) {
+        onChange(exactMatch.name);
+      }
+    }, 200);
+  };
 
   return (
     <div className="relative">
@@ -50,10 +65,16 @@ function PlayerInput({
         value={value}
         onChange={e => { onChange(e.target.value); setShowSuggestions(true); }}
         onFocus={() => setShowSuggestions(true)}
-        onBlur={() => { timeoutRef.current = setTimeout(() => setShowSuggestions(false), 200); }}
+        onBlur={handleBlur}
         placeholder={placeholder}
         className="w-full bg-surface-container-highest p-4 rounded-[0.75rem] text-on-surface font-medium outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline"
       />
+      {/* New player indicator */}
+      {isNewPlayer && !showSuggestions && (
+        <span className="absolute right-4 top-[38px] text-[10px] font-bold text-tertiary uppercase tracking-widest">
+          New player
+        </span>
+      )}
       {showSuggestions && filtered.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-surface-container-lowest rounded-[0.75rem] shadow-[0_8px_32px_rgba(0,0,0,0.1)] max-h-40 overflow-y-auto z-10">
           {filtered.slice(0, 5).map(p => (
