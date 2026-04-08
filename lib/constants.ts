@@ -44,7 +44,11 @@ export const STORAGE_KEYS = {
   GAMES: 'paddleup_games',
   USER_ID: 'paddleup_user_id',
   INITIALIZED: 'paddleup_initialized',
+  VERSION: 'paddleup_version',
 } as const;
+
+// Bump this to force a reseed of sample data
+export const DATA_VERSION = 2;
 
 // App
 export const APP_NAME = 'PaddleUp';

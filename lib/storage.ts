@@ -1,5 +1,5 @@
 import type { Player, Game } from '@/types';
-import { STORAGE_KEYS } from './constants';
+import { STORAGE_KEYS, DATA_VERSION } from './constants';
 import { generateSampleData } from './sample-data';
 
 function getItem<T>(key: string): T | null {
@@ -18,8 +18,12 @@ function setItem<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function isCurrentVersion(): boolean {
+  return getItem<number>(STORAGE_KEYS.VERSION) === DATA_VERSION;
+}
+
 export function isInitialized(): boolean {
-  return getItem<boolean>(STORAGE_KEYS.INITIALIZED) === true;
+  return getItem<boolean>(STORAGE_KEYS.INITIALIZED) === true && isCurrentVersion();
 }
 
 export function initialize(): { players: Player[]; games: Game[]; userId: string } {
@@ -31,11 +35,15 @@ export function initialize(): { players: Player[]; games: Game[]; userId: string
     };
   }
 
+  // Clear old data on version mismatch
+  resetAll();
+
   const { players, games, userId } = generateSampleData();
   setItem(STORAGE_KEYS.PLAYERS, players);
   setItem(STORAGE_KEYS.GAMES, games);
   setItem(STORAGE_KEYS.USER_ID, userId);
   setItem(STORAGE_KEYS.INITIALIZED, true);
+  setItem(STORAGE_KEYS.VERSION, DATA_VERSION);
 
   return { players, games, userId };
 }

@@ -12,15 +12,15 @@ interface SamplePlayer {
 }
 
 const SAMPLE_PLAYERS: SamplePlayer[] = [
-  { name: 'Marcus V.', elo: 3150, wins: 45, losses: 12, streak: 3, form: ['W', 'W', 'W', 'L', 'W'] },
-  { name: 'Sarah K.', elo: 2840, wins: 38, losses: 18, streak: -1, form: ['L', 'W', 'W', 'W', 'L'] },
-  { name: 'Elena G.', elo: 2710, wins: 35, losses: 20, streak: 2, form: ['W', 'W', 'L', 'W', 'W'] },
-  { name: 'Jordan Miller', elo: 2650, wins: 30, losses: 15, streak: 3, form: ['W', 'W', 'W', 'L', 'W'] },
-  { name: 'Clara Smith', elo: 2580, wins: 28, losses: 14, streak: 4, form: ['L', 'W', 'W', 'W', 'W'] },
-  { name: 'Thomas Reed', elo: 2410, wins: 25, losses: 20, streak: -2, form: ['W', 'L', 'L', 'W', 'L'] },
-  { name: 'Zoe Chen', elo: 2395, wins: 32, losses: 10, streak: 5, form: ['W', 'W', 'W', 'W', 'W'] },
+  { name: 'Alex', elo: 3150, wins: 45, losses: 12, streak: 3, form: ['W', 'W', 'W', 'L', 'W'] },
+  { name: 'Lily', elo: 2840, wins: 38, losses: 18, streak: -1, form: ['L', 'W', 'W', 'W', 'L'] },
+  { name: 'Darrich', elo: 2710, wins: 35, losses: 20, streak: 2, form: ['W', 'W', 'L', 'W', 'W'] },
+  { name: 'Alfonso', elo: 2650, wins: 30, losses: 15, streak: 3, form: ['W', 'W', 'W', 'L', 'W'] },
+  { name: 'Ting', elo: 2580, wins: 28, losses: 14, streak: 4, form: ['L', 'W', 'W', 'W', 'W'] },
+  { name: 'Jules Navarro', elo: 2410, wins: 25, losses: 20, streak: -2, form: ['W', 'L', 'L', 'W', 'L'] },
+  { name: 'Mei-Lin Wu', elo: 2395, wins: 32, losses: 10, streak: 5, form: ['W', 'W', 'W', 'W', 'W'] },
   { name: 'Coach Rick', elo: 1945, wins: 22, losses: 18, streak: 2, form: ['W', 'W', 'L', 'W', 'L'] },
-  { name: 'Priya M.', elo: 1200, wins: 8, losses: 12, streak: -1, form: ['L', 'W', 'L', 'W', 'L'] },
+  { name: 'Sam Okoro', elo: 1200, wins: 8, losses: 12, streak: -1, form: ['L', 'W', 'L', 'W', 'L'] },
 ];
 
 function generateEloHistory(currentElo: number, gamesPlayed: number): EloSnapshot[] {

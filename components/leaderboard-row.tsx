@@ -12,12 +12,12 @@ interface LeaderboardRowProps {
 export default function LeaderboardRow({ player, rank, isUser }: LeaderboardRowProps) {
   if (isUser) {
     return (
-      <div className="bg-primary-container rounded-[1.5rem] p-4 flex items-center gap-4 shadow-lg shadow-primary-container/20">
-        <span className="text-2xl font-black font-[family-name:var(--font-headline)] text-on-primary-container italic w-8">
+      <div className="bg-primary-container rounded-[1.5rem] p-4 flex items-center gap-3 shadow-lg shadow-primary-container/20">
+        <span className="text-2xl font-black font-[family-name:var(--font-headline)] text-on-primary-container italic w-12 flex-shrink-0 text-center">
           #{rank}
         </span>
         <div
-          className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
           style={{ backgroundColor: getAvatarColour(player.name), color: '#d9ffad' }}
         >
           {getInitials(player.name)}
@@ -43,10 +43,10 @@ export default function LeaderboardRow({ player, rank, isUser }: LeaderboardRowP
   }
 
   return (
-    <div className="bg-surface-container-lowest p-4 rounded-[1.5rem] flex items-center gap-4 hover:scale-[1.02] transition-transform">
-      <span className="text-lg font-bold text-on-surface-variant w-8 text-center">{rank < 10 ? `0${rank}` : rank}</span>
+    <div className="bg-surface-container-lowest p-4 rounded-[1.5rem] flex items-center gap-3 hover:scale-[1.02] transition-transform">
+      <span className="text-lg font-bold text-on-surface-variant w-12 flex-shrink-0 text-center">{rank < 10 ? `0${rank}` : rank}</span>
       <div
-        className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold"
+        className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
         style={{ backgroundColor: getAvatarColour(player.name), color: '#d9ffad' }}
       >
         {getInitials(player.name)}
