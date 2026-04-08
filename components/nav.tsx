@@ -14,7 +14,7 @@ export default function Nav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 pb-8 pt-2 bg-surface-container-lowest/80 backdrop-blur-[24px] rounded-t-[1.5rem] shadow-[0_-8px_32px_rgba(0,0,0,0.06)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 pb-3 pt-2 bg-surface-container-lowest/80 backdrop-blur-[24px] rounded-t-[1.5rem] shadow-[0_-8px_32px_rgba(0,0,0,0.06)]">
       {tabs.map(tab => {
         const isActive = pathname === tab.href;
 

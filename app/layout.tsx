@@ -39,7 +39,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-dvh pb-28">
+      <body className="min-h-dvh pb-20">
         <Header />
         <main className="pt-20 px-5 max-w-2xl mx-auto">
           {children}
