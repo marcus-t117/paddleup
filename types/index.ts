@@ -26,6 +26,7 @@ export interface Game {
   id: string;
   date: string;
   type: 'singles' | 'doubles';
+  leagueId: string;
   playerIds: string[];
   opponentIds: string[];
   playerScore: number;
@@ -34,6 +35,30 @@ export interface Game {
   eloChanges: Record<string, number>; // playerId -> delta
   venue?: string;
   createdAt: string;
+}
+
+export interface League {
+  id: string;
+  name: string;
+  createdAt: string;
+  isDefault: boolean;
+  memberIds: string[];
+}
+
+export interface LeagueMembership {
+  leagueId: string;
+  playerId: string;
+  elo: number;
+  eloHistory: EloSnapshot[];
+  wins: number;
+  losses: number;
+  currentStreak: number;
+  bestStreak: number;
+  gamesPlayed: number;
+  xp: number;
+  level: number;
+  recentForm: ('W' | 'L')[];
+  badges: string[];
 }
 
 export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'platinum';

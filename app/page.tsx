@@ -12,13 +12,16 @@ import ActivityItem from '@/components/activity-item';
 import Link from 'next/link';
 import { getWinRate } from '@/lib/utils';
 import { BADGES } from '@/lib/badges';
+import LeagueSwitcher from '@/components/league-switcher';
+import { useLeague } from '@/contexts/league-context';
 
 export default function Dashboard() {
   const { players, currentUser, userId, loading: playersLoading } = usePlayers();
   const [showEloChart, setShowEloChart] = useState(false);
   const { games, getUserGames, loading: gamesLoading } = useGames();
+  const { loading: leagueLoading } = useLeague();
 
-  if (playersLoading || gamesLoading || !currentUser || !userId) {
+  if (playersLoading || gamesLoading || leagueLoading || !currentUser || !userId) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -34,6 +37,11 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 pb-8">
+      {/* League Switcher */}
+      <section>
+        <LeagueSwitcher />
+      </section>
+
       {/* Welcome */}
       <section className="flex flex-col gap-1">
         <span className="font-[family-name:var(--font-headline)] font-bold text-primary uppercase tracking-widest text-xs">

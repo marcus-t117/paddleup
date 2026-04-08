@@ -45,10 +45,15 @@ export const STORAGE_KEYS = {
   USER_ID: 'paddleup_user_id',
   INITIALIZED: 'paddleup_initialized',
   VERSION: 'paddleup_version',
+  LEAGUES: 'paddleup_leagues',
+  LEAGUE_MEMBERSHIPS: 'paddleup_league_memberships',
+  ACTIVE_LEAGUE: 'paddleup_active_league',
 } as const;
 
 // Bump this to force a reseed of sample data
-export const DATA_VERSION = 3;
+export const DATA_VERSION = 4;
+
+export const DEFAULT_LEAGUE_NAME = 'Elite Division';
 
 // App
 export const APP_NAME = 'PaddleUp';

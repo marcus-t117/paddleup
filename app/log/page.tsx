@@ -7,10 +7,12 @@ import LogGameModal, { type LogGameData } from '@/components/log-game-modal';
 import MatchResultCard from '@/components/match-result-card';
 import BadgeUnlockCard from '@/components/badge-unlock-card';
 import { getWinRate } from '@/lib/utils';
+import { useLeague } from '@/contexts/league-context';
 
 export default function LogPage() {
   const { players, currentUser, userId, loading: playersLoading, getOrCreatePlayer, refreshPlayers } = usePlayers();
   const { games, logGame, getUserGames, loading: gamesLoading, refreshGames } = useGames();
+  const { activeLeague } = useLeague();
   const [showModal, setShowModal] = useState(false);
   const [lastResult, setLastResult] = useState<{ eloDelta: number; newBadges: string[] } | null>(null);
 
@@ -59,9 +61,14 @@ export default function LogPage() {
           <span className="text-on-primary/60 text-xs font-bold uppercase tracking-widest block mb-2">
             Ready for action?
           </span>
-          <h1 className="text-3xl font-extrabold font-[family-name:var(--font-headline)] text-on-primary tracking-tight mb-6">
+          <h1 className="text-3xl font-extrabold font-[family-name:var(--font-headline)] text-on-primary tracking-tight mb-2">
             DOMINATE THE COURT.
           </h1>
+          {activeLeague && (
+            <span className="inline-block bg-on-primary/10 text-on-primary/80 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4">
+              Logging to: {activeLeague.name}
+            </span>
+          )}
           <button
             onClick={() => setShowModal(true)}
             className="bg-primary-fixed text-on-primary-fixed px-8 py-3 rounded-full font-bold text-sm uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
