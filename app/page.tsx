@@ -12,6 +12,7 @@ import ActivityItem from '@/components/activity-item';
 import Link from 'next/link';
 import { getWinRate } from '@/lib/utils';
 import { BADGES } from '@/lib/badges';
+import { getBadgeStyle } from '@/components/badge-circle';
 import LeagueSwitcher from '@/components/league-switcher';
 import { useLeague } from '@/contexts/league-context';
 
@@ -117,28 +118,36 @@ export default function Dashboard() {
           <section>
             <Link href="/awards" className="block bg-surface-container-lowest p-5 rounded-[1.5rem] hover:scale-[1.02] transition-transform">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full relative flex-shrink-0 overflow-hidden">
-                  {/* Grey base */}
-                  <div className="absolute inset-0 bg-surface-container-high" />
-                  {/* Colour fill from bottom */}
-                  <div
-                    className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-primary-container transition-all duration-700"
-                    style={{ height: `${Math.min(next.percent, 100)}%` }}
-                  />
-                  {/* Icon on top */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span
-                      className="material-symbols-outlined text-2xl"
+                {(() => {
+                  const style = getBadgeStyle(next.badge.id);
+                  return (
+                    <div
+                      className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 relative"
                       style={{
-                        color: next.percent > 50 ? '#d9ffad' : '#595c59',
-                        fontVariationSettings: "'FILL' 1",
-                        transition: 'color 0.5s',
+                        padding: '2px',
+                        background: style.ring,
+                        boxShadow: `0 0 ${Math.round(next.percent / 5) + 8}px ${style.glow}, 0 0 ${Math.round(next.percent / 3) + 12}px ${style.glow}`,
+                        opacity: 0.4 + (next.percent / 100) * 0.6,
+                        transition: 'all 0.7s',
                       }}
                     >
-                      {next.badge.icon}
-                    </span>
-                  </div>
-                </div>
+                      <div
+                        className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+                        style={{ background: style.bg }}
+                      >
+                        <span
+                          className="material-symbols-outlined text-2xl"
+                          style={{
+                            fontVariationSettings: "'FILL' 1, 'wght' 500",
+                            color: style.iconColor,
+                          }}
+                        >
+                          {next.badge.icon}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Next Badge</span>

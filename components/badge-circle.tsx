@@ -3,7 +3,7 @@
 import type { BadgeDefinition } from '@/types';
 
 // Each badge gets a unique visual identity
-const BADGE_STYLES: Record<string, { bg: string; ring: string; glow: string; iconColor: string }> = {
+export const BADGE_STYLES: Record<string, { bg: string; ring: string; glow: string; iconColor: string }> = {
   'flash-serve':      { bg: 'linear-gradient(135deg, #d97706, #f59e0b)', ring: '#fbbf24', glow: 'rgba(251, 191, 36, 0.3)', iconColor: '#fff' },
   'hot-streak':       { bg: 'linear-gradient(135deg, #dc2626, #f97316)', ring: '#ef4444', glow: 'rgba(239, 68, 68, 0.3)', iconColor: '#fff' },
   'inferno':          { bg: 'linear-gradient(135deg, #9a3412, #dc2626)', ring: '#b91c1c', glow: 'rgba(185, 28, 28, 0.35)', iconColor: '#fef2f2' },
@@ -17,6 +17,10 @@ const BADGE_STYLES: Record<string, { bg: string; ring: string; glow: string; ico
   'court-dominator':  { bg: 'linear-gradient(135deg, #345c00, #96fc00)', ring: '#96fc00', glow: 'rgba(150, 252, 0, 0.4)', iconColor: '#1a2e00' },
   'perfect-week':     { bg: 'linear-gradient(135deg, #0369a1, #38bdf8)', ring: '#7dd3fc', glow: 'rgba(125, 211, 252, 0.3)', iconColor: '#f0f9ff' },
 };
+
+export function getBadgeStyle(badgeId: string) {
+  return BADGE_STYLES[badgeId] || { bg: '#535c69', ring: '#abaea9', glow: 'rgba(0,0,0,0.1)', iconColor: '#fff' };
+}
 
 const TIER_RING_WIDTH: Record<string, string> = {
   bronze: '2px',
