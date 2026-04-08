@@ -1,65 +1,110 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { usePlayers } from '@/hooks/use-players';
+import { useGames } from '@/hooks/use-games';
+import EloHero from '@/components/elo-hero';
+import StatCard from '@/components/stat-card';
+import StreakCard from '@/components/streak-card';
+import MatchCountdown from '@/components/match-countdown';
+import ActivityItem from '@/components/activity-item';
+import Link from 'next/link';
+import { getWinRate } from '@/lib/utils';
+import { BADGES } from '@/lib/badges';
+
+export default function Dashboard() {
+  const { players, currentUser, userId, loading: playersLoading } = usePlayers();
+  const { games, getUserGames, loading: gamesLoading } = useGames();
+
+  if (playersLoading || gamesLoading || !currentUser || !userId) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  const userGames = getUserGames(userId);
+  const recentGames = userGames.slice(0, 3);
+  const winRate = getWinRate(currentUser);
+  const totalBadges = BADGES.length;
+  const unlockedBadges = currentUser.badges.length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-8 pb-8">
+      {/* Welcome */}
+      <section className="flex flex-col gap-1">
+        <span className="font-[family-name:var(--font-headline)] font-bold text-primary uppercase tracking-widest text-xs">
+          Welcome Back, Champ
+        </span>
+        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-[family-name:var(--font-headline)]">
+          {currentUser.name}
+        </h1>
+      </section>
+
+      {/* Bento Stats Grid */}
+      <section className="grid grid-cols-2 gap-4">
+        <EloHero player={currentUser} allPlayers={players} />
+        <StatCard
+          label="Match Wins"
+          value={currentUser.wins}
+          subtitle={`/ ${currentUser.gamesPlayed}`}
+          progress={currentUser.gamesPlayed > 0 ? winRate : 0}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <StreakCard streak={currentUser.currentStreak} />
+      </section>
+
+      {/* Upcoming Match (demo) */}
+      <section>
+        <MatchCountdown />
+      </section>
+
+      {/* Recent Activity */}
+      <section className="space-y-4">
+        <div className="flex justify-between items-end">
+          <h2 className="text-2xl font-extrabold font-[family-name:var(--font-headline)] tracking-tight">
+            RECENT LOG
+          </h2>
+          <Link href="/log" className="text-primary font-bold text-xs uppercase tracking-widest">
+            View All
+          </Link>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+        <div className="space-y-3">
+          {recentGames.length > 0 ? (
+            recentGames.map(game => (
+              <ActivityItem key={game.id} game={game} userId={userId} players={players} />
+            ))
+          ) : (
+            <div className="bg-surface-container-low p-8 rounded-[1.5rem] text-center">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">sports_tennis</span>
+              <p className="text-on-surface-variant font-medium">No games logged yet</p>
+              <Link
+                href="/log"
+                className="mt-4 inline-block bg-primary text-on-primary px-6 py-2 rounded-full font-bold text-sm uppercase tracking-widest"
+              >
+                Log Your First Game
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Badge Progress */}
+      <section>
+        <Link href="/awards" className="block bg-surface-container-low p-4 rounded-[1.5rem] hover:scale-[1.02] transition-transform">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest">
+              Badge Progress
+            </span>
+            <span className="text-primary font-bold text-xs">{unlockedBadges} / {totalBadges}</span>
+          </div>
+          <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full transition-all duration-500"
+              style={{ width: `${(unlockedBadges / totalBadges) * 100}%` }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+          </div>
+        </Link>
+      </section>
     </div>
   );
 }
