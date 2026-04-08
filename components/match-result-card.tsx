@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Game, Player } from '@/types';
 import { formatDateTime, getInitials, getAvatarColour, getEloTier } from '@/lib/utils';
 
@@ -12,9 +12,21 @@ interface MatchResultCardProps {
 
 function TappableAvatar({ player, className }: { player: Player; className?: string }) {
   const [showName, setShowName] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showName) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setShowName(false);
+      }
+    };
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [showName]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setShowName(!showName)}
@@ -24,13 +36,9 @@ function TappableAvatar({ player, className }: { player: Player; className?: str
         {getInitials(player.name)}
       </button>
       {showName && (
-        <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-inverse-surface text-inverse-on-surface px-3 py-1.5 rounded-[0.75rem] text-xs font-medium whitespace-nowrap z-20 shadow-lg"
-          onClick={() => setShowName(false)}
-        >
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-inverse-surface text-inverse-on-surface px-3 py-1.5 rounded-[0.75rem] text-xs font-medium whitespace-nowrap z-20 shadow-lg">
           <div className="font-bold">{player.name}</div>
           <div className="text-[10px] opacity-70">{player.elo} ELO · {getEloTier(player.elo)}</div>
-          {/* Tooltip arrow */}
           <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-inverse-surface" />
         </div>
       )}
