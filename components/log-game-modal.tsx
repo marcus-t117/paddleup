@@ -1,41 +1,104 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { Player } from '@/types';
+
+export interface LogGameData {
+  opponentName: string;
+  opponent2Name?: string;
+  partnerName?: string;
+  playerScore: number;
+  opponentScore: number;
+  type: 'singles' | 'doubles';
+  venue?: string;
+}
 
 interface LogGameModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: {
-    opponentName: string;
-    playerScore: number;
-    opponentScore: number;
-    type: 'singles' | 'doubles';
-    venue?: string;
-  }) => void;
+  onSubmit: (data: LogGameData) => void;
   players: Player[];
+}
+
+function PlayerInput({
+  label,
+  value,
+  onChange,
+  players,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  players: Player[];
+  placeholder: string;
+}) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout>(null);
+
+  const filtered = value.length > 0
+    ? players.filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+    : players;
+
+  return (
+    <div className="relative">
+      <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant block mb-2">
+        {label}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={e => { onChange(e.target.value); setShowSuggestions(true); }}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={() => { timeoutRef.current = setTimeout(() => setShowSuggestions(false), 200); }}
+        placeholder={placeholder}
+        className="w-full bg-surface-container-highest p-4 rounded-[0.75rem] text-on-surface font-medium outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline"
+      />
+      {showSuggestions && filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-surface-container-lowest rounded-[0.75rem] shadow-[0_8px_32px_rgba(0,0,0,0.1)] max-h-40 overflow-y-auto z-10">
+          {filtered.slice(0, 5).map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onMouseDown={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }}
+              onClick={() => { onChange(p.name); setShowSuggestions(false); }}
+              className="w-full text-left px-4 py-3 hover:bg-surface-container-low text-on-surface font-medium flex items-center justify-between"
+            >
+              <span>{p.name}</span>
+              <span className="text-xs text-on-surface-variant">{p.elo} ELO</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function LogGameModal({ isOpen, onClose, onSubmit, players }: LogGameModalProps) {
   const [opponentName, setOpponentName] = useState('');
+  const [opponent2Name, setOpponent2Name] = useState('');
+  const [partnerName, setPartnerName] = useState('');
   const [playerScore, setPlayerScore] = useState(11);
   const [opponentScore, setOpponentScore] = useState(0);
   const [gameType, setGameType] = useState<'singles' | 'doubles'>('singles');
   const [venue, setVenue] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   if (!isOpen) return null;
 
   const nonUserPlayers = players.filter(p => !p.isUser);
-  const filteredPlayers = opponentName.length > 0
-    ? nonUserPlayers.filter(p => p.name.toLowerCase().includes(opponentName.toLowerCase()))
-    : nonUserPlayers;
+  const isDoubles = gameType === 'doubles';
+
+  const canSubmit = opponentName.trim()
+    && playerScore !== opponentScore
+    && (!isDoubles || (partnerName.trim() && opponent2Name.trim()));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!opponentName.trim()) return;
+    if (!canSubmit) return;
     onSubmit({
       opponentName: opponentName.trim(),
+      opponent2Name: isDoubles ? opponent2Name.trim() : undefined,
+      partnerName: isDoubles ? partnerName.trim() : undefined,
       playerScore,
       opponentScore,
       type: gameType,
@@ -43,6 +106,8 @@ export default function LogGameModal({ isOpen, onClose, onSubmit, players }: Log
     });
     // Reset
     setOpponentName('');
+    setOpponent2Name('');
+    setPartnerName('');
     setPlayerScore(11);
     setOpponentScore(0);
     setVenue('');
@@ -88,42 +153,42 @@ export default function LogGameModal({ isOpen, onClose, onSubmit, players }: Log
             </div>
           </div>
 
-          {/* Opponent */}
-          <div className="relative">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant block mb-2">
-              Opponent
-            </label>
-            <input
-              type="text"
-              value={opponentName}
-              onChange={e => { setOpponentName(e.target.value); setShowSuggestions(true); }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              placeholder="Type name or select..."
-              className="w-full bg-surface-container-highest p-4 rounded-[0.75rem] text-on-surface font-medium outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline"
+          {/* Doubles: Your Partner */}
+          {isDoubles && (
+            <PlayerInput
+              label="Your Partner"
+              value={partnerName}
+              onChange={setPartnerName}
+              players={nonUserPlayers}
+              placeholder="Who's on your team?"
             />
-            {showSuggestions && filteredPlayers.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-surface-container-lowest rounded-[0.75rem] shadow-[0_8px_32px_rgba(0,0,0,0.1)] max-h-40 overflow-y-auto z-10">
-                {filteredPlayers.slice(0, 5).map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => { setOpponentName(p.name); setShowSuggestions(false); }}
-                    className="w-full text-left px-4 py-3 hover:bg-surface-container-low text-on-surface font-medium flex items-center justify-between"
-                  >
-                    <span>{p.name}</span>
-                    <span className="text-xs text-on-surface-variant">{p.elo} ELO</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
+
+          {/* Opponent 1 */}
+          <PlayerInput
+            label={isDoubles ? 'Opponent 1' : 'Opponent'}
+            value={opponentName}
+            onChange={setOpponentName}
+            players={nonUserPlayers}
+            placeholder="Type name or select..."
+          />
+
+          {/* Doubles: Opponent 2 */}
+          {isDoubles && (
+            <PlayerInput
+              label="Opponent 2"
+              value={opponent2Name}
+              onChange={setOpponent2Name}
+              players={nonUserPlayers}
+              placeholder="Their partner..."
+            />
+          )}
 
           {/* Scores */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant block mb-2">
-                Your Score
+                {isDoubles ? 'Your Team' : 'Your Score'}
               </label>
               <div className="flex items-center gap-3 bg-surface-container-highest rounded-[0.75rem] p-2">
                 <button
@@ -147,7 +212,7 @@ export default function LogGameModal({ isOpen, onClose, onSubmit, players }: Log
             </div>
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant block mb-2">
-                Their Score
+                {isDoubles ? 'Their Team' : 'Their Score'}
               </label>
               <div className="flex items-center gap-3 bg-surface-container-highest rounded-[0.75rem] p-2">
                 <button
@@ -188,7 +253,7 @@ export default function LogGameModal({ isOpen, onClose, onSubmit, players }: Log
           {/* Submit */}
           <button
             type="submit"
-            disabled={!opponentName.trim() || playerScore === opponentScore}
+            disabled={!canSubmit}
             className="w-full bg-primary text-on-primary py-4 rounded-full font-bold uppercase tracking-widest text-sm hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Log Match

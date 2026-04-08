@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { usePlayers } from '@/hooks/use-players';
 import { useGames } from '@/hooks/use-games';
-import LogGameModal from '@/components/log-game-modal';
+import LogGameModal, { type LogGameData } from '@/components/log-game-modal';
 import MatchResultCard from '@/components/match-result-card';
 import BadgeUnlockCard from '@/components/badge-unlock-card';
 import { getWinRate } from '@/lib/utils';
@@ -14,19 +14,15 @@ export default function LogPage() {
   const [showModal, setShowModal] = useState(false);
   const [lastResult, setLastResult] = useState<{ eloDelta: number; newBadges: string[] } | null>(null);
 
-  const handleLogGame = useCallback((data: {
-    opponentName: string;
-    playerScore: number;
-    opponentScore: number;
-    type: 'singles' | 'doubles';
-    venue?: string;
-  }) => {
+  const handleLogGame = useCallback((data: LogGameData) => {
     if (!userId) return;
 
     const result = logGame(
       {
         type: data.type,
         opponentName: data.opponentName,
+        opponent2Name: data.opponent2Name,
+        partnerName: data.partnerName,
         playerScore: data.playerScore,
         opponentScore: data.opponentScore,
         venue: data.venue,

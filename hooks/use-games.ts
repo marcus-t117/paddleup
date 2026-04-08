@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Game, Player } from '@/types';
 import { getGames, saveGames, getPlayers, savePlayers } from '@/lib/storage';
-import { calculateEloChange } from '@/lib/elo';
+import { calculateEloChange, calculateDoublesEloChanges } from '@/lib/elo';
 import { calculateXpEarned } from '@/lib/xp';
 import { getLevel } from '@/lib/utils';
 import { checkBadges } from '@/lib/badges';
@@ -11,11 +11,31 @@ import { checkBadges } from '@/lib/badges';
 interface LogGameInput {
   type: 'singles' | 'doubles';
   opponentName: string;
-  partnerName?: string;
   opponent2Name?: string;
+  partnerName?: string;
   playerScore: number;
   opponentScore: number;
   venue?: string;
+}
+
+function updatePlayerStats(player: Player, won: boolean, eloDelta: number, xpEarned: number, gameDate: string, gameId: string): Player {
+  const newStreak = won
+    ? (player.currentStreak > 0 ? player.currentStreak + 1 : 1)
+    : (player.currentStreak < 0 ? player.currentStreak - 1 : -1);
+
+  return {
+    ...player,
+    elo: Math.max(0, player.elo + eloDelta),
+    eloHistory: [...player.eloHistory, { date: gameDate, elo: Math.max(0, player.elo + eloDelta), gameId }],
+    wins: player.wins + (won ? 1 : 0),
+    losses: player.losses + (won ? 0 : 1),
+    currentStreak: newStreak,
+    bestStreak: Math.max(player.bestStreak, newStreak),
+    gamesPlayed: player.gamesPlayed + 1,
+    xp: player.xp + xpEarned,
+    level: getLevel(player.xp + xpEarned),
+    recentForm: [...player.recentForm, won ? 'W' : 'L'].slice(-5) as ('W' | 'L')[],
+  };
 }
 
 export function useGames() {
@@ -36,98 +56,97 @@ export function useGames() {
     const user = players.find(p => p.id === userId)!;
     const opponent = getOrCreatePlayer(input.opponentName);
 
-    // Refresh players list in case new player was created
-    const updatedPlayers = getPlayers();
-
     const won = input.playerScore > input.opponentScore;
+    const now = new Date().toISOString();
+    const gameId = crypto.randomUUID();
 
-    // Calculate ELO changes
-    const userEloDelta = calculateEloChange(user.elo, opponent.elo, won, user.gamesPlayed);
-    const oppEloDelta = calculateEloChange(opponent.elo, user.elo, !won, opponent.gamesPlayed);
+    let eloChanges: Record<string, number>;
+    let playerIds: string[];
+    let opponentIds: string[];
 
-    const eloChanges: Record<string, number> = {
-      [user.id]: userEloDelta,
-      [opponent.id]: oppEloDelta,
-    };
+    if (input.type === 'doubles' && input.partnerName && input.opponent2Name) {
+      // Doubles
+      const partner = getOrCreatePlayer(input.partnerName);
+      const opponent2 = getOrCreatePlayer(input.opponent2Name);
 
-    // Create game record
+      const { team1Deltas, team2Deltas } = calculateDoublesEloChanges(
+        [{ elo: user.elo, gamesPlayed: user.gamesPlayed }, { elo: partner.elo, gamesPlayed: partner.gamesPlayed }],
+        [{ elo: opponent.elo, gamesPlayed: opponent.gamesPlayed }, { elo: opponent2.elo, gamesPlayed: opponent2.gamesPlayed }],
+        won
+      );
+
+      eloChanges = {
+        [user.id]: team1Deltas[0],
+        [partner.id]: team1Deltas[1],
+        [opponent.id]: team2Deltas[0],
+        [opponent2.id]: team2Deltas[1],
+      };
+      playerIds = [user.id, partner.id];
+      opponentIds = [opponent.id, opponent2.id];
+    } else {
+      // Singles
+      const userDelta = calculateEloChange(user.elo, opponent.elo, won, user.gamesPlayed);
+      const oppDelta = calculateEloChange(opponent.elo, user.elo, !won, opponent.gamesPlayed);
+
+      eloChanges = {
+        [user.id]: userDelta,
+        [opponent.id]: oppDelta,
+      };
+      playerIds = [user.id];
+      opponentIds = [opponent.id];
+    }
+
     const game: Game = {
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
+      id: gameId,
+      date: now,
       type: input.type,
-      playerIds: [user.id],
-      opponentIds: [opponent.id],
+      playerIds,
+      opponentIds,
       playerScore: input.playerScore,
       opponentScore: input.opponentScore,
       winner: won ? 'player' : 'opponent',
       eloChanges,
       venue: input.venue,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
 
-    // Update user
-    const newUserStreak = won
-      ? (user.currentStreak > 0 ? user.currentStreak + 1 : 1)
-      : (user.currentStreak < 0 ? user.currentStreak - 1 : -1);
-
-    const xpEarned = calculateXpEarned(
-      won,
-      newUserStreak,
-      user.elo,
-      opponent.elo
-    );
-
-    const updatedUser: Player = {
-      ...user,
-      elo: Math.max(0, user.elo + userEloDelta),
-      eloHistory: [...user.eloHistory, { date: game.date, elo: Math.max(0, user.elo + userEloDelta), gameId: game.id }],
-      wins: user.wins + (won ? 1 : 0),
-      losses: user.losses + (won ? 0 : 1),
-      currentStreak: newUserStreak,
-      bestStreak: Math.max(user.bestStreak, newUserStreak),
-      gamesPlayed: user.gamesPlayed + 1,
-      xp: user.xp + xpEarned,
-      level: getLevel(user.xp + xpEarned),
-      recentForm: [...user.recentForm, won ? 'W' : 'L'].slice(-5) as ('W' | 'L')[],
-    };
-
-    // Update opponent
-    const newOppStreak = !won
-      ? (opponent.currentStreak > 0 ? opponent.currentStreak + 1 : 1)
-      : (opponent.currentStreak < 0 ? opponent.currentStreak - 1 : -1);
-
-    const updatedOpponent: Player = {
-      ...opponent,
-      elo: Math.max(0, opponent.elo + oppEloDelta),
-      eloHistory: [...opponent.eloHistory, { date: game.date, elo: Math.max(0, opponent.elo + oppEloDelta), gameId: game.id }],
-      wins: opponent.wins + (!won ? 1 : 0),
-      losses: opponent.losses + (!won ? 0 : 1),
-      currentStreak: newOppStreak,
-      bestStreak: Math.max(opponent.bestStreak, newOppStreak),
-      gamesPlayed: opponent.gamesPlayed + 1,
-      xp: opponent.xp + calculateXpEarned(!won, newOppStreak, opponent.elo, user.elo),
-      level: getLevel(opponent.xp + calculateXpEarned(!won, newOppStreak, opponent.elo, user.elo)),
-      recentForm: [...opponent.recentForm, !won ? 'W' : 'L'].slice(-5) as ('W' | 'L')[],
-    };
-
-    // Save game
+    // Update all involved players
     const allGames = [...getGames(), game];
+    const updatedPlayers = getPlayers();
+    const playerUpdates = new Map<string, Player>();
+
+    for (const [pid, delta] of Object.entries(eloChanges)) {
+      const p = updatedPlayers.find(pl => pl.id === pid);
+      if (!p) continue;
+
+      const isOnWinningSide = playerIds.includes(pid) ? won : !won;
+      const avgOppElo = playerIds.includes(pid)
+        ? opponentIds.reduce((sum, oid) => sum + (updatedPlayers.find(pl => pl.id === oid)?.elo || 1000), 0) / opponentIds.length
+        : playerIds.reduce((sum, pid2) => sum + (updatedPlayers.find(pl => pl.id === pid2)?.elo || 1000), 0) / playerIds.length;
+
+      const newStreak = isOnWinningSide
+        ? (p.currentStreak > 0 ? p.currentStreak + 1 : 1)
+        : (p.currentStreak < 0 ? p.currentStreak - 1 : -1);
+
+      const xp = calculateXpEarned(isOnWinningSide, newStreak, p.elo, avgOppElo);
+      const updated = updatePlayerStats(p, isOnWinningSide, delta, xp, now, gameId);
+      playerUpdates.set(pid, updated);
+    }
+
     saveGames(allGames);
     setGames(allGames);
 
-    // Check for new badges
+    // Check badges for user
+    const updatedUser = playerUpdates.get(userId)!;
     const newBadges = checkBadges(updatedUser, allGames);
     updatedUser.badges = [...updatedUser.badges, ...newBadges];
+    playerUpdates.set(userId, updatedUser);
 
-    // Save players
-    const finalPlayers = updatedPlayers.map(p => {
-      if (p.id === user.id) return updatedUser;
-      if (p.id === opponent.id) return updatedOpponent;
-      return p;
-    });
+    // Save all player updates
+    const finalPlayers = updatedPlayers.map(p => playerUpdates.get(p.id) || p);
     savePlayers(finalPlayers);
 
-    return { game, newBadges, eloDelta: userEloDelta };
+    return { game, newBadges, eloDelta: eloChanges[userId] };
   }, []);
 
   const getUserGames = useCallback((userId: string) => {

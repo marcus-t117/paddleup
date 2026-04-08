@@ -13,7 +13,7 @@ export default function EloHero({ player, allPlayers }: EloHeroProps) {
   const weeklyChange = getWeeklyEloChange(player);
 
   return (
-    <div className="col-span-2 bg-gradient-to-br from-primary to-primary-dim p-6 rounded-[2rem] text-on-primary flex justify-between items-end relative overflow-hidden">
+    <div className="bg-gradient-to-br from-primary to-primary-dim p-6 rounded-[2rem] text-on-primary flex justify-between items-end relative overflow-hidden hover:scale-[1.01] transition-transform active:scale-[0.99]">
       <div className="relative z-10">
         <span className="text-on-primary/70 text-xs font-bold uppercase tracking-widest block mb-1">
           Current Rating

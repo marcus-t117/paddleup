@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { usePlayers } from '@/hooks/use-players';
 import { useGames } from '@/hooks/use-games';
 import EloHero from '@/components/elo-hero';
+import EloChart from '@/components/elo-chart';
 import StatCard from '@/components/stat-card';
 import StreakCard from '@/components/streak-card';
 import MatchCountdown from '@/components/match-countdown';
@@ -13,6 +15,7 @@ import { BADGES } from '@/lib/badges';
 
 export default function Dashboard() {
   const { players, currentUser, userId, loading: playersLoading } = usePlayers();
+  const [showEloChart, setShowEloChart] = useState(false);
   const { games, getUserGames, loading: gamesLoading } = useGames();
 
   if (playersLoading || gamesLoading || !currentUser || !userId) {
@@ -43,7 +46,9 @@ export default function Dashboard() {
 
       {/* Bento Stats Grid */}
       <section className="grid grid-cols-2 gap-4">
-        <EloHero player={currentUser} allPlayers={players} />
+        <div className="col-span-2 cursor-pointer" onClick={() => setShowEloChart(true)}>
+          <EloHero player={currentUser} allPlayers={players} />
+        </div>
         <StatCard
           label="Match Wins"
           value={currentUser.wins}
@@ -105,6 +110,11 @@ export default function Dashboard() {
           </div>
         </Link>
       </section>
+
+      {/* ELO Chart Modal */}
+      {showEloChart && currentUser.eloHistory.length >= 2 && (
+        <EloChart history={currentUser.eloHistory} onClose={() => setShowEloChart(false)} />
+      )}
     </div>
   );
 }
