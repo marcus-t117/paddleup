@@ -93,6 +93,44 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* Next Badge Tracker */}
+      {(() => {
+        const lockedWithProgress = BADGES
+          .filter(b => !currentUser.badges.includes(b.id) && b.progress)
+          .map(b => {
+            const p = b.progress!(currentUser, games);
+            return { badge: b, current: p.current, target: p.target, percent: (p.current / p.target) * 100 };
+          })
+          .filter(b => b.percent > 0)
+          .sort((a, b) => b.percent - a.percent);
+        const next = lockedWithProgress[0];
+        if (!next) return null;
+        return (
+          <section>
+            <Link href="/awards" className="block bg-surface-container-lowest p-5 rounded-[1.5rem] hover:scale-[1.02] transition-transform">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-xl text-on-surface-variant">{next.badge.icon}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Next Badge</span>
+                    <span className="text-xs font-bold text-on-surface-variant">{next.current}/{next.target}</span>
+                  </div>
+                  <h3 className="font-bold text-on-surface text-sm truncate">{next.badge.name}</h3>
+                  <div className="mt-2 h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(next.percent, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </section>
+        );
+      })()}
+
       {/* Badge Progress */}
       <section>
         <Link href="/awards" className="block bg-surface-container-low p-4 rounded-[1.5rem] hover:scale-[1.02] transition-transform">
