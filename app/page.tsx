@@ -109,8 +109,27 @@ export default function Dashboard() {
           <section>
             <Link href="/awards" className="block bg-surface-container-lowest p-5 rounded-[1.5rem] hover:scale-[1.02] transition-transform">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
-                  <span className="material-symbols-outlined text-xl text-on-surface-variant">{next.badge.icon}</span>
+                <div className="w-14 h-14 rounded-full relative flex-shrink-0 overflow-hidden">
+                  {/* Grey base */}
+                  <div className="absolute inset-0 bg-surface-container-high" />
+                  {/* Colour fill from bottom */}
+                  <div
+                    className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-primary-container transition-all duration-700"
+                    style={{ height: `${Math.min(next.percent, 100)}%` }}
+                  />
+                  {/* Icon on top */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span
+                      className="material-symbols-outlined text-2xl"
+                      style={{
+                        color: next.percent > 50 ? '#d9ffad' : '#595c59',
+                        fontVariationSettings: "'FILL' 1",
+                        transition: 'color 0.5s',
+                      }}
+                    >
+                      {next.badge.icon}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-1">
