@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { resetAll } from '@/lib/storage';
+import { getSyncCode, clearSyncCode } from '@/lib/sync';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,12 +11,26 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [confirmReset, setConfirmReset] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const syncCode = isOpen ? getSyncCode() : null;
 
   if (!isOpen) return null;
 
   const handleReset = () => {
+    clearSyncCode();
     resetAll();
     window.location.reload();
+  };
+
+  const handleCopy = async () => {
+    if (!syncCode) return;
+    try {
+      await navigator.clipboard.writeText(syncCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for browsers without clipboard API
+    }
   };
 
   return (
@@ -33,6 +48,30 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         <div className="space-y-4">
+          {/* Sync Code */}
+          {syncCode && (
+            <div className="p-4 rounded-[1rem] bg-surface-container-low">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  Sync Code
+                </span>
+                <button
+                  onClick={handleCopy}
+                  className="text-primary text-xs font-bold uppercase tracking-widest hover:opacity-80"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+              <p className="text-2xl font-black tracking-[0.3em] text-on-surface font-[family-name:var(--font-headline)] text-center">
+                {syncCode}
+              </p>
+              <p className="text-xs text-on-surface-variant mt-2 text-center">
+                Use this code to restore your data if you clear your browser or switch devices.
+              </p>
+            </div>
+          )}
+
+          {/* Reset */}
           {!confirmReset ? (
             <button
               onClick={() => setConfirmReset(true)}

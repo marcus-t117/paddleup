@@ -1,6 +1,7 @@
 import type { Player, Game, League, LeagueMembership } from '@/types';
 import { STORAGE_KEYS, DATA_VERSION, STARTING_ELO } from './constants';
 import { generateSampleData } from './sample-data';
+import { pushToServer } from './sync';
 
 function getItem<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -16,6 +17,17 @@ function getItem<T>(key: string): T | null {
 function setItem<T>(key: string, value: T): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(key, JSON.stringify(value));
+  scheduleSync();
+}
+
+// Debounced sync — batches rapid writes into a single server push
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleSync(): void {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    pushToServer();
+    syncTimer = null;
+  }, 1000);
 }
 
 function isCurrentVersion(): boolean {
