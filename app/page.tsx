@@ -7,7 +7,6 @@ import EloHero from '@/components/elo-hero';
 import EloChart from '@/components/elo-chart';
 import StatCard from '@/components/stat-card';
 import StreakCard from '@/components/streak-card';
-import MatchCountdown from '@/components/match-countdown';
 import ActivityItem from '@/components/activity-item';
 import Link from 'next/link';
 import { getWinRate } from '@/lib/utils';
@@ -65,11 +64,6 @@ export default function Dashboard() {
           progress={currentUser.gamesPlayed > 0 ? winRate : 0}
         />
         <StreakCard streak={currentUser.currentStreak} />
-      </section>
-
-      {/* Upcoming Match (demo) */}
-      <section>
-        <MatchCountdown />
       </section>
 
       {/* Recent Activity */}

@@ -1,14 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { usePlayers } from '@/hooks/use-players';
 import { useLeague } from '@/contexts/league-context';
 import Podium from '@/components/podium';
 import LeaderboardRow from '@/components/leaderboard-row';
 import LeagueSwitcher from '@/components/league-switcher';
+import AddPlayerModal from '@/components/add-player-modal';
 
 export default function LeaguePage() {
-  const { players, userId, loading } = usePlayers();
+  const { players, userId, loading, getOrCreatePlayer, refreshPlayers } = usePlayers();
   const { activeLeague, loading: leagueLoading } = useLeague();
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
 
   if (loading || leagueLoading) {
     return (
@@ -24,6 +27,12 @@ export default function LeaguePage() {
   const userRank = sorted.findIndex(p => p.id === userId) + 1;
   const userInTop3 = userRank <= 3;
 
+  const handleAddPlayer = (name: string) => {
+    getOrCreatePlayer(name);
+    refreshPlayers();
+    setShowAddPlayer(false);
+  };
+
   return (
     <div className="space-y-6 pb-8">
       {/* League Switcher */}
@@ -32,13 +41,22 @@ export default function LeaguePage() {
       </section>
 
       {/* Header */}
-      <section className="flex flex-col gap-1">
-        <span className="font-[family-name:var(--font-headline)] font-bold text-primary uppercase tracking-widest text-xs">
-          {activeLeague?.name || 'League'}
-        </span>
-        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-[family-name:var(--font-headline)]">
-          LEAGUE RANKINGS
-        </h1>
+      <section className="flex items-end justify-between gap-2">
+        <div className="flex flex-col gap-1">
+          <span className="font-[family-name:var(--font-headline)] font-bold text-primary uppercase tracking-widest text-xs">
+            {activeLeague?.name || 'League'}
+          </span>
+          <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-[family-name:var(--font-headline)]">
+            LEAGUE RANKINGS
+          </h1>
+        </div>
+        <button
+          onClick={() => setShowAddPlayer(true)}
+          className="flex items-center gap-1.5 bg-primary text-on-primary px-4 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest hover:opacity-90 transition-opacity active:scale-[0.98] flex-shrink-0"
+        >
+          <span className="material-symbols-outlined text-sm">person_add</span>
+          Add
+        </button>
       </section>
 
       {/* Podium */}
@@ -49,7 +67,7 @@ export default function LeaguePage() {
       ) : (
         <section className="bg-surface-container-low p-8 rounded-[2rem] text-center">
           <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">groups</span>
-          <p className="text-on-surface-variant font-medium">No members yet. Log a game to get started.</p>
+          <p className="text-on-surface-variant font-medium">No members yet. Add players to get started.</p>
         </section>
       )}
 
@@ -74,6 +92,12 @@ export default function LeaguePage() {
           />
         ))}
       </section>
+
+      <AddPlayerModal
+        isOpen={showAddPlayer}
+        onClose={() => setShowAddPlayer(false)}
+        onAdd={handleAddPlayer}
+      />
     </div>
   );
 }

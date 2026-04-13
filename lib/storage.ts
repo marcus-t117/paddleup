@@ -1,5 +1,5 @@
 import type { Player, Game, League, LeagueMembership } from '@/types';
-import { STORAGE_KEYS, DATA_VERSION } from './constants';
+import { STORAGE_KEYS, DATA_VERSION, STARTING_ELO } from './constants';
 import { generateSampleData } from './sample-data';
 
 function getItem<T>(key: string): T | null {
@@ -29,7 +29,7 @@ export function isInitialized(): boolean {
 export function initialize(): {
   players: Player[];
   games: Game[];
-  userId: string;
+  userId: string | null;
   leagues: League[];
   memberships: LeagueMembership[];
 } {
@@ -37,26 +37,105 @@ export function initialize(): {
     return {
       players: getPlayers(),
       games: getGames(),
-      userId: getUserId()!,
+      userId: getUserId(),
       leagues: getLeagues(),
       memberships: getLeagueMemberships(),
     };
   }
 
-  // Clear old data on version mismatch
+  // Not initialised: clear stale data and return empty state
+  // The setup screen will call initializeWithSetup() to populate
   resetAll();
 
-  const { players, games, userId, leagues, memberships } = generateSampleData();
-  setItem(STORAGE_KEYS.PLAYERS, players);
-  setItem(STORAGE_KEYS.GAMES, games);
+  return { players: [], games: [], userId: null, leagues: [], memberships: [] };
+}
+
+export function initializeWithSetup(userName: string, leagueName: string): {
+  players: Player[];
+  games: Game[];
+  userId: string;
+  leagues: League[];
+  memberships: LeagueMembership[];
+} {
+  resetAll();
+
+  const userId = crypto.randomUUID();
+  const userLeagueId = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  // Create user player
+  const userPlayer: Player = {
+    id: userId,
+    name: userName,
+    elo: STARTING_ELO,
+    eloHistory: [{ date: now, elo: STARTING_ELO, gameId: 'initial' }],
+    wins: 0, losses: 0, currentStreak: 0, bestStreak: 0, gamesPlayed: 0,
+    badges: [], xp: 0, level: 1, recentForm: [],
+    createdAt: now,
+    isUser: true,
+  };
+
+  // Generate demo league with sample data
+  const demo = generateSampleData();
+  // Mark demo league as non-default
+  demo.leagues[0].isDefault = false;
+  demo.leagues[0].name = 'Demo League';
+
+  // Replace the demo user with our real user (keep them in the demo league too)
+  const demoUserId = demo.userId;
+  // Remove the demo user player, add real user
+  const demoPlayers = demo.players.filter(p => !p.isUser);
+  // Add user to demo league members
+  demo.leagues[0].memberIds = demo.leagues[0].memberIds
+    .filter(id => id !== demoUserId)
+    .concat(userId);
+  // Fix game references from demo userId to real userId
+  const demoGames = demo.games.map(g => ({
+    ...g,
+    playerIds: g.playerIds.map(id => id === demoUserId ? userId : id),
+    opponentIds: g.opponentIds.map(id => id === demoUserId ? userId : id),
+    eloChanges: Object.fromEntries(
+      Object.entries(g.eloChanges).map(([k, v]) => [k === demoUserId ? userId : k, v])
+    ),
+  }));
+  // Fix demo memberships
+  const demoMemberships = demo.memberships.map(m =>
+    m.playerId === demoUserId ? { ...m, playerId: userId } : m
+  );
+
+  // Create user's real league
+  const userLeague: League = {
+    id: userLeagueId,
+    name: leagueName,
+    createdAt: now,
+    isDefault: true,
+    memberIds: [userId],
+  };
+
+  // User membership in their real league (fresh)
+  const userMembership: LeagueMembership = {
+    leagueId: userLeagueId,
+    playerId: userId,
+    elo: STARTING_ELO,
+    eloHistory: [{ date: now, elo: STARTING_ELO, gameId: 'initial' }],
+    wins: 0, losses: 0, currentStreak: 0, bestStreak: 0, gamesPlayed: 0,
+    xp: 0, level: 1, recentForm: [], badges: [],
+  };
+
+  const allPlayers = [userPlayer, ...demoPlayers];
+  const allLeagues = [userLeague, ...demo.leagues];
+  const allMemberships = [userMembership, ...demoMemberships];
+
+  setItem(STORAGE_KEYS.PLAYERS, allPlayers);
+  setItem(STORAGE_KEYS.GAMES, demoGames);
   setItem(STORAGE_KEYS.USER_ID, userId);
-  setItem(STORAGE_KEYS.LEAGUES, leagues);
-  setItem(STORAGE_KEYS.LEAGUE_MEMBERSHIPS, memberships);
-  setItem(STORAGE_KEYS.ACTIVE_LEAGUE, leagues[0].id);
+  setItem(STORAGE_KEYS.LEAGUES, allLeagues);
+  setItem(STORAGE_KEYS.LEAGUE_MEMBERSHIPS, allMemberships);
+  setItem(STORAGE_KEYS.ACTIVE_LEAGUE, userLeagueId);
   setItem(STORAGE_KEYS.INITIALIZED, true);
   setItem(STORAGE_KEYS.VERSION, DATA_VERSION);
 
-  return { players, games, userId, leagues, memberships };
+  return { players: allPlayers, games: demoGames, userId, leagues: allLeagues, memberships: allMemberships };
 }
 
 // Players

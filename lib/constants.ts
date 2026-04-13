@@ -51,7 +51,7 @@ export const STORAGE_KEYS = {
 } as const;
 
 // Bump this to force a reseed of sample data
-export const DATA_VERSION = 4;
+export const DATA_VERSION = 5;
 
 export const DEFAULT_LEAGUE_NAME = 'Elite Division';
 
