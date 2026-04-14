@@ -69,19 +69,56 @@ export function pushToServer(): void {
   });
 }
 
+export type PullResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: 'timeout' | 'network' | 'not_found' | 'server' | 'bad_response';
+      status?: number;
+      detail?: string;
+    };
+
 // Pull state from server and restore to localStorage
-export async function pullFromServer(code: string): Promise<boolean> {
+export async function pullFromServer(code: string): Promise<PullResult> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+  let res: Response;
   try {
-    const res = await fetch(`/api/sync?code=${encodeURIComponent(code)}`);
-    if (!res.ok) return false;
-
-    const state = await res.json();
-    if (!state || typeof state !== 'object') return false;
-
-    restoreState(state as Record<string, unknown>);
-    setSyncCode(code.toUpperCase());
-    return true;
-  } catch {
-    return false;
+    res = await fetch(`/api/sync?code=${encodeURIComponent(code)}`, {
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const reason = err instanceof DOMException && err.name === 'AbortError' ? 'timeout' : 'network';
+    const detail = err instanceof Error ? err.message : String(err);
+    console.warn('[paddleup sync] pull failed', reason, detail);
+    return { ok: false, reason, detail };
   }
+  clearTimeout(timeoutId);
+
+  const bodyText = await res.text().catch(() => '');
+
+  if (!res.ok) {
+    const reason: 'not_found' | 'server' = res.status === 404 ? 'not_found' : 'server';
+    console.warn('[paddleup sync] pull failed', reason, res.status, bodyText);
+    return { ok: false, reason, status: res.status, detail: bodyText };
+  }
+
+  let state: unknown;
+  try {
+    state = JSON.parse(bodyText);
+  } catch {
+    console.warn('[paddleup sync] pull failed', 'bad_response', res.status, bodyText.slice(0, 200));
+    return { ok: false, reason: 'bad_response', status: res.status, detail: 'Non-JSON response' };
+  }
+
+  if (!state || typeof state !== 'object') {
+    console.warn('[paddleup sync] pull failed', 'bad_response', res.status, typeof state);
+    return { ok: false, reason: 'bad_response', status: res.status, detail: 'Empty or non-object state' };
+  }
+
+  restoreState(state as Record<string, unknown>);
+  setSyncCode(code.toUpperCase());
+  return { ok: true };
 }

@@ -45,13 +45,23 @@ export default function SetupScreen({ onComplete }: SetupScreenProps) {
     setRestoring(true);
     setRestoreError('');
 
-    const success = await pullFromServer(code);
-    if (success) {
-      onComplete();
-    } else {
-      setRestoreError('No data found for that code. Check and try again.');
+    const result = await pullFromServer(code);
+
+    if (result.ok) {
       setRestoring(false);
+      onComplete();
+      return;
     }
+
+    const messages: Record<typeof result.reason, string> = {
+      timeout: "The server didn't respond. Check your connection and try again.",
+      network: "Couldn't reach the server. Try again in a moment.",
+      not_found: 'No data found for that code. Check and try again.',
+      server: 'Server error. Please try again or contact support.',
+      bad_response: 'Unexpected response from server. Try again.',
+    };
+    setRestoreError(messages[result.reason]);
+    setRestoring(false);
   };
 
   return (

@@ -13,7 +13,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Storage not configured' }, { status: 503 });
   }
 
-  const data = await redis.get(`paddleup:${code.toUpperCase()}`);
+  let data: unknown;
+  try {
+    data = await redis.get(`paddleup:${code.toUpperCase()}`);
+  } catch (err) {
+    console.error('[paddleup sync] redis get failed', err);
+    return NextResponse.json(
+      { error: 'Redis read failed', detail: String(err) },
+      { status: 500 }
+    );
+  }
+
   if (!data) {
     return NextResponse.json({ error: 'No data found for this code' }, { status: 404 });
   }
@@ -36,7 +46,15 @@ export async function PUT(req: NextRequest) {
   }
 
   // Store with no expiry (persistent)
-  await redis.set(`paddleup:${code.toUpperCase()}`, data);
+  try {
+    await redis.set(`paddleup:${code.toUpperCase()}`, data);
+  } catch (err) {
+    console.error('[paddleup sync] redis set failed', err);
+    return NextResponse.json(
+      { error: 'Redis write failed', detail: String(err) },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }
