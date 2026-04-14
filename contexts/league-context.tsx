@@ -11,7 +11,8 @@ import {
   getActiveLeagueId,
   setActiveLeagueId as persistActiveLeague,
 } from '@/lib/storage';
-import { STARTING_ELO } from '@/lib/constants';
+import { STARTING_ELO, SHARED_LEAGUES } from '@/lib/constants';
+import { pullShared, mergeSharedSlice } from '@/lib/sync';
 
 interface LeagueContextValue {
   leagues: League[];
@@ -36,6 +37,34 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
     const storedActive = getActiveLeagueId();
     setActiveId(storedActive || data.leagues[0]?.id || null);
     setLoading(false);
+
+    let cancelled = false;
+
+    async function refreshSharedLeagues() {
+      for (const shared of SHARED_LEAGUES) {
+        const result = await pullShared(shared.id);
+        if (cancelled) return;
+        if (result.ok) {
+          mergeSharedSlice(result.slice);
+          setLeagues(getLeagues());
+        }
+      }
+    }
+
+    // Boot pull
+    refreshSharedLeagues();
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refreshSharedLeagues();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', refreshSharedLeagues);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', refreshSharedLeagues);
+    };
   }, []);
 
   const activeLeague = leagues.find(l => l.id === activeLeagueId) || null;

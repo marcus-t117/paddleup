@@ -55,5 +55,14 @@ export const DATA_VERSION = 5;
 
 export const DEFAULT_LEAGUE_NAME = 'Elite Division';
 
+// Shared leagues — state mirrored to Upstash, same view across all devices
+export const SHARED_LEAGUES = [
+  { id: 'shared-test', name: 'Tuesday Titanic Throwdown' },
+] as const;
+
+export function isSharedLeagueId(id: string): boolean {
+  return SHARED_LEAGUES.some(s => s.id === id);
+}
+
 // App
 export const APP_NAME = 'PaddleUp';

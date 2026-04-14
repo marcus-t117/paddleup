@@ -1,7 +1,7 @@
 import type { Player, Game, League, LeagueMembership } from '@/types';
-import { STORAGE_KEYS, DATA_VERSION, STARTING_ELO } from './constants';
+import { STORAGE_KEYS, DATA_VERSION, STARTING_ELO, SHARED_LEAGUES } from './constants';
 import { generateSampleData } from './sample-data';
-import { pushToServer } from './sync';
+import { pushShared } from './sync';
 
 function getItem<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -20,12 +20,17 @@ function setItem<T>(key: string, value: T): void {
   scheduleSync();
 }
 
-// Debounced sync — batches rapid writes into a single server push
+// Debounced sync — batches rapid writes into a single server push per shared league
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleSync(): void {
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(() => {
-    pushToServer();
+    const leagues = getLeagues();
+    for (const shared of SHARED_LEAGUES) {
+      if (leagues.some(l => l.id === shared.id)) {
+        pushShared(shared.id);
+      }
+    }
     syncTimer = null;
   }, 1000);
 }
@@ -46,6 +51,7 @@ export function initialize(): {
   memberships: LeagueMembership[];
 } {
   if (isInitialized()) {
+    ensureSharedLeaguePlaceholders();
     return {
       players: getPlayers(),
       games: getGames(),
@@ -137,6 +143,34 @@ export function initializeWithSetup(userName: string, leagueName: string): {
   const allPlayers = [userPlayer, ...demoPlayers];
   const allLeagues = [userLeague, ...demo.leagues];
   const allMemberships = [userMembership, ...demoMemberships];
+
+  // Seed placeholder entries for each shared league. Boot-pull merges with server state.
+  for (const shared of SHARED_LEAGUES) {
+    if (!allLeagues.some(l => l.id === shared.id)) {
+      allLeagues.push({
+        id: shared.id,
+        name: shared.name,
+        createdAt: now,
+        isDefault: false,
+        memberIds: [userId],
+      });
+      allMemberships.push({
+        leagueId: shared.id,
+        playerId: userId,
+        elo: STARTING_ELO,
+        eloHistory: [{ date: now, elo: STARTING_ELO, gameId: 'initial' }],
+        wins: 0,
+        losses: 0,
+        currentStreak: 0,
+        bestStreak: 0,
+        gamesPlayed: 0,
+        xp: 0,
+        level: 1,
+        recentForm: [],
+        badges: [],
+      });
+    }
+  }
 
   setItem(STORAGE_KEYS.PLAYERS, allPlayers);
   setItem(STORAGE_KEYS.GAMES, demoGames);
@@ -257,4 +291,52 @@ export function upsertMembership(membership: LeagueMembership): void {
 export function resetAll(): void {
   if (typeof window === 'undefined') return;
   Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+}
+
+// Ensure each shared league has a placeholder entry + user membership.
+// Idempotent; safe to call on every boot for already-initialised users.
+function ensureSharedLeaguePlaceholders(): void {
+  const userId = getUserId();
+  if (!userId) return;
+
+  const leagues = getLeagues();
+  const memberships = getLeagueMemberships();
+  const now = new Date().toISOString();
+  let changed = false;
+
+  for (const shared of SHARED_LEAGUES) {
+    if (!leagues.some(l => l.id === shared.id)) {
+      leagues.push({
+        id: shared.id,
+        name: shared.name,
+        createdAt: now,
+        isDefault: false,
+        memberIds: [userId],
+      });
+      changed = true;
+    }
+    if (!memberships.some(m => m.leagueId === shared.id && m.playerId === userId)) {
+      memberships.push({
+        leagueId: shared.id,
+        playerId: userId,
+        elo: STARTING_ELO,
+        eloHistory: [{ date: now, elo: STARTING_ELO, gameId: 'initial' }],
+        wins: 0,
+        losses: 0,
+        currentStreak: 0,
+        bestStreak: 0,
+        gamesPlayed: 0,
+        xp: 0,
+        level: 1,
+        recentForm: [],
+        badges: [],
+      });
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveLeagues(leagues);
+    saveLeagueMemberships(memberships);
+  }
 }

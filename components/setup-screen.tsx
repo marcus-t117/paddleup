@@ -1,19 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { generateSyncCode, setSyncCode, pullFromServer } from '@/lib/sync';
 
 interface SetupScreenProps {
   onComplete: () => void;
 }
 
 export default function SetupScreen({ onComplete }: SetupScreenProps) {
-  const [step, setStep] = useState<'name' | 'league' | 'restore'>('name');
+  const [step, setStep] = useState<'name' | 'league'>('name');
   const [name, setName] = useState('');
   const [leagueName, setLeagueName] = useState('');
-  const [restoreCode, setRestoreCode] = useState('');
-  const [restoreError, setRestoreError] = useState('');
-  const [restoring, setRestoring] = useState(false);
 
   const handleNext = () => {
     if (step === 'name' && name.trim()) {
@@ -27,41 +23,7 @@ export default function SetupScreen({ onComplete }: SetupScreenProps) {
     const { initializeWithSetup } = await import('@/lib/storage');
     initializeWithSetup(name.trim(), leagueName.trim());
 
-    // Generate and store a sync code, then push initial state
-    const code = generateSyncCode();
-    setSyncCode(code);
-    const { pushToServer } = await import('@/lib/sync');
-    pushToServer();
-
     onComplete();
-  };
-
-  const handleRestore = async () => {
-    const code = restoreCode.trim().toUpperCase();
-    if (code.length < 4) {
-      setRestoreError('Code must be at least 4 characters');
-      return;
-    }
-    setRestoring(true);
-    setRestoreError('');
-
-    const result = await pullFromServer(code);
-
-    if (result.ok) {
-      setRestoring(false);
-      onComplete();
-      return;
-    }
-
-    const messages: Record<typeof result.reason, string> = {
-      timeout: "The server didn't respond. Check your connection and try again.",
-      network: "Couldn't reach the server. Try again in a moment.",
-      not_found: 'No data found for that code. Check and try again.',
-      server: 'Server error. Please try again or contact support.',
-      bad_response: 'Unexpected response from server. Try again.',
-    };
-    setRestoreError(messages[result.reason]);
-    setRestoring(false);
   };
 
   return (
@@ -99,15 +61,6 @@ export default function SetupScreen({ onComplete }: SetupScreenProps) {
           >
             Next
           </button>
-
-          <div className="text-center pt-2">
-            <button
-              onClick={() => setStep('restore')}
-              className="text-primary text-sm font-bold uppercase tracking-widest hover:opacity-80"
-            >
-              Restore from sync code
-            </button>
-          </div>
         </div>
       )}
 
@@ -156,48 +109,6 @@ export default function SetupScreen({ onComplete }: SetupScreenProps) {
         </div>
       )}
 
-      {step === 'restore' && (
-        <div className="w-full max-w-sm space-y-6">
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant block mb-2">
-              Sync Code
-            </label>
-            <input
-              type="text"
-              value={restoreCode}
-              onChange={e => { setRestoreCode(e.target.value.toUpperCase()); setRestoreError(''); }}
-              onKeyDown={e => e.key === 'Enter' && handleRestore()}
-              placeholder="Enter your 6-character code"
-              autoFocus
-              maxLength={6}
-              className="w-full bg-surface-container-highest p-4 rounded-[0.75rem] text-on-surface font-medium text-lg text-center tracking-[0.3em] uppercase outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline placeholder:tracking-normal placeholder:text-sm"
-            />
-            {restoreError && (
-              <p className="text-error text-xs mt-2 font-medium">{restoreError}</p>
-            )}
-            <p className="text-xs text-on-surface-variant mt-2">
-              Find this in Settings on your original device.
-            </p>
-          </div>
-
-          <button
-            onClick={handleRestore}
-            disabled={restoreCode.trim().length < 4 || restoring}
-            className="w-full bg-primary text-on-primary py-4 rounded-full font-bold uppercase tracking-widest text-sm hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {restoring ? 'Restoring...' : 'Restore Data'}
-          </button>
-
-          <div className="text-center">
-            <button
-              onClick={() => setStep('name')}
-              className="text-on-surface-variant text-sm font-bold uppercase tracking-widest hover:opacity-80"
-            >
-              Start fresh instead
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
