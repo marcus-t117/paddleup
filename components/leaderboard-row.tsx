@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Player } from '@/types';
 import { getInitials, getAvatarColour } from '@/lib/utils';
 
@@ -12,12 +13,14 @@ interface LeaderboardRowProps {
 }
 
 export default function LeaderboardRow({ player, rank, isUser, onRemove }: LeaderboardRowProps) {
+  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout>(null);
 
   useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
 
-  const handleRemoveClick = () => {
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (confirming) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setConfirming(false);
@@ -27,9 +30,16 @@ export default function LeaderboardRow({ player, rank, isUser, onRemove }: Leade
       timeoutRef.current = setTimeout(() => setConfirming(false), 3000);
     }
   };
+
+  const goToProfile = () => router.push(`/player/${player.id}`);
+
   if (isUser) {
     return (
-      <div className="bg-primary-container rounded-[1.5rem] p-4 flex items-center gap-3 shadow-lg shadow-primary-container/20">
+      <button
+        type="button"
+        onClick={goToProfile}
+        className="w-full text-left bg-primary-container rounded-[1.5rem] p-4 flex items-center gap-3 shadow-lg shadow-primary-container/20 hover:opacity-95 transition-opacity active:scale-[0.99]"
+      >
         <span className="text-2xl font-black font-[family-name:var(--font-headline)] text-on-primary-container italic w-12 flex-shrink-0 text-center">
           #{rank}
         </span>
@@ -55,12 +65,16 @@ export default function LeaderboardRow({ player, rank, isUser, onRemove }: Leade
             {player.elo.toLocaleString()}
           </span>
         </div>
-      </div>
+      </button>
     );
   }
 
   return (
-    <div className="bg-surface-container-lowest p-4 rounded-[1.5rem] flex items-center gap-3 hover:scale-[1.02] transition-transform">
+    <button
+      type="button"
+      onClick={goToProfile}
+      className="w-full text-left bg-surface-container-lowest p-4 rounded-[1.5rem] flex items-center gap-3 hover:scale-[1.02] transition-transform"
+    >
       <span className="text-lg font-bold text-on-surface-variant w-12 flex-shrink-0 text-center">{rank < 10 ? `0${rank}` : rank}</span>
       <div
         className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
@@ -102,10 +116,11 @@ export default function LeaderboardRow({ player, rank, isUser, onRemove }: Leade
           </div>
         </div>
         {onRemove && (
-          <button
-            type="button"
+          <span
+            role="button"
+            tabIndex={0}
             onClick={handleRemoveClick}
-            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 cursor-pointer ${
               confirming
                 ? 'bg-error text-on-error'
                 : 'bg-surface-container-high text-on-surface-variant hover:bg-error/20 hover:text-error'
@@ -115,9 +130,9 @@ export default function LeaderboardRow({ player, rank, isUser, onRemove }: Leade
             <span className="material-symbols-outlined text-sm">
               {confirming ? 'warning' : 'person_remove'}
             </span>
-          </button>
+          </span>
         )}
       </div>
-    </div>
+    </button>
   );
 }
