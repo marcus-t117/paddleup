@@ -1,14 +1,55 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import type { Player } from '@/types';
 import { getInitials, getAvatarColour } from '@/lib/utils';
 
 interface PodiumProps {
   players: Player[]; // top 3, sorted by ELO desc
+  userId?: string | null;
+  onRemove?: (playerId: string) => void;
 }
 
-export default function Podium({ players }: PodiumProps) {
+function RemoveButton({ onRemove }: { onRemove: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout>(null);
+
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirming) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setConfirming(false);
+      onRemove();
+    } else {
+      setConfirming(true);
+      timeoutRef.current = setTimeout(() => setConfirming(false), 3000);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center transition-all z-20 shadow-sm ${
+        confirming
+          ? 'bg-error text-on-error'
+          : 'bg-surface-container-highest text-on-surface-variant hover:bg-error/30 hover:text-error'
+      }`}
+      title={confirming ? 'Tap again to confirm remove' : 'Remove from league'}
+    >
+      <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>
+        {confirming ? 'warning' : 'close'}
+      </span>
+    </button>
+  );
+}
+
+export default function Podium({ players, userId, onRemove }: PodiumProps) {
   const [first, second, third] = players;
+
+  const showRemove = (p: Player) => Boolean(onRemove && p.id !== userId);
 
   return (
     <div className="flex items-end justify-center gap-3 pt-8 pb-4">
@@ -25,6 +66,7 @@ export default function Podium({ players }: PodiumProps) {
             >
               {getInitials(second.name)}
             </div>
+            {showRemove(second) && <RemoveButton onRemove={() => onRemove!(second.id)} />}
           </div>
           <span className="text-xs font-medium text-on-surface truncate max-w-[80px]">{second.name}</span>
           <span className="text-sm font-bold text-on-surface-variant">{second.elo.toLocaleString()}</span>
@@ -44,6 +86,7 @@ export default function Podium({ players }: PodiumProps) {
             >
               {getInitials(first.name)}
             </div>
+            {showRemove(first) && <RemoveButton onRemove={() => onRemove!(first.id)} />}
           </div>
           <span className="text-sm font-bold text-on-surface">{first.name}</span>
           <span className="text-lg font-black font-[family-name:var(--font-headline)] text-primary">{first.elo.toLocaleString()}</span>
@@ -63,6 +106,7 @@ export default function Podium({ players }: PodiumProps) {
             >
               {getInitials(third.name)}
             </div>
+            {showRemove(third) && <RemoveButton onRemove={() => onRemove!(third.id)} />}
           </div>
           <span className="text-xs font-medium text-on-surface truncate max-w-[80px]">{third.name}</span>
           <span className="text-sm font-bold text-on-surface-variant">{third.elo.toLocaleString()}</span>

@@ -148,25 +148,29 @@ export function useGames() {
       };
     }
 
-    // Check badges for user
-    const userM = memberships.find(m => m.leagueId === activeLeagueId && m.playerId === userId)!;
-    // Build a temp Player for badge checking
-    const tempPlayer: Player = {
-      id: userId, name: '', elo: userM.elo, eloHistory: userM.eloHistory,
-      wins: userM.wins, losses: userM.losses, currentStreak: userM.currentStreak,
-      bestStreak: userM.bestStreak, gamesPlayed: userM.gamesPlayed,
-      badges: userM.badges, xp: userM.xp, level: userM.level,
-      recentForm: userM.recentForm, createdAt: '', isUser: true,
-    };
-    const newBadges = checkBadges(tempPlayer, leagueGames);
-    if (newBadges.length > 0) {
-      const uIdx = memberships.findIndex(m => m.leagueId === activeLeagueId && m.playerId === userId);
-      memberships[uIdx].badges = [...memberships[uIdx].badges, ...newBadges];
+    // Check badges for every player involved in the game (not just the logger)
+    let userNewBadges: string[] = [];
+    for (const pid of Object.keys(eloChanges)) {
+      const mIdx = memberships.findIndex(m => m.leagueId === activeLeagueId && m.playerId === pid);
+      if (mIdx < 0) continue;
+      const m = memberships[mIdx];
+      const tempPlayer: Player = {
+        id: pid, name: '', elo: m.elo, eloHistory: m.eloHistory,
+        wins: m.wins, losses: m.losses, currentStreak: m.currentStreak,
+        bestStreak: m.bestStreak, gamesPlayed: m.gamesPlayed,
+        badges: m.badges, xp: m.xp, level: m.level,
+        recentForm: m.recentForm, createdAt: '', isUser: pid === userId,
+      };
+      const newBadges = checkBadges(tempPlayer, leagueGames);
+      if (newBadges.length > 0) {
+        memberships[mIdx] = { ...m, badges: [...m.badges, ...newBadges] };
+        if (pid === userId) userNewBadges = newBadges;
+      }
     }
 
     saveLeagueMemberships(memberships);
 
-    return { game, newBadges, eloDelta: eloChanges[userId] };
+    return { game, newBadges: userNewBadges, eloDelta: eloChanges[userId] };
   }, [activeLeagueId]);
 
   const deleteGame = useCallback((gameId: string) => {

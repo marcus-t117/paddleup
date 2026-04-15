@@ -62,7 +62,14 @@ export default function LeaguePage() {
       {/* Podium */}
       {top3.length > 0 ? (
         <section className="bg-surface-container-low rounded-[2rem] p-4">
-          <Podium players={top3} />
+          <Podium
+            players={top3}
+            userId={userId}
+            onRemove={activeLeagueId ? (playerId) => {
+              removePlayerFromLeague(activeLeagueId, playerId);
+              refreshPlayers();
+            } : undefined}
+          />
         </section>
       ) : (
         <section className="bg-surface-container-low p-8 rounded-[2rem] text-center">

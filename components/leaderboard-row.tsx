@@ -69,7 +69,18 @@ export default function LeaderboardRow({ player, rank, isUser, onRemove }: Leade
         {getInitials(player.name)}
       </div>
       <div className="flex-1 min-w-0">
-        <span className="font-bold text-on-surface">{player.name}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-on-surface">{player.name}</span>
+          {player.currentStreak >= 3 && (
+            <span
+              className="material-symbols-outlined text-tertiary text-base"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+              title={`On a ${player.currentStreak}-game win streak`}
+            >
+              local_fire_department
+            </span>
+          )}
+        </div>
         <div className="flex gap-1 mt-1">
           {player.recentForm.map((result, i) => (
             <div
