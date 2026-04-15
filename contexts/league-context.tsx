@@ -21,6 +21,7 @@ interface LeagueContextValue {
   setActiveLeagueId: (id: string) => void;
   createLeague: (name: string, memberIds: string[]) => League;
   addMembersToLeague: (leagueId: string, playerIds: string[]) => void;
+  removePlayerFromLeague: (leagueId: string, playerId: string) => void;
   loading: boolean;
 }
 
@@ -146,6 +147,21 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
     saveLeagueMemberships([...existingMemberships, ...newMemberships]);
   }, []);
 
+  const removePlayerFromLeague = useCallback((leagueId: string, playerId: string) => {
+    const allLeagues = getLeagues();
+    const league = allLeagues.find(l => l.id === leagueId);
+    if (!league) return;
+
+    league.memberIds = league.memberIds.filter(id => id !== playerId);
+    saveLeagues(allLeagues);
+    setLeagues([...allLeagues]);
+
+    const memberships = getLeagueMemberships().filter(
+      m => !(m.leagueId === leagueId && m.playerId === playerId)
+    );
+    saveLeagueMemberships(memberships);
+  }, []);
+
   return (
     <LeagueContext.Provider value={{
       leagues,
@@ -154,6 +170,7 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
       setActiveLeagueId,
       createLeague,
       addMembersToLeague,
+      removePlayerFromLeague,
       loading,
     }}>
       {children}

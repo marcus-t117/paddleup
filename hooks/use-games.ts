@@ -169,6 +169,36 @@ export function useGames() {
     return { game, newBadges, eloDelta: eloChanges[userId] };
   }, [activeLeagueId]);
 
+  const deleteGame = useCallback((gameId: string) => {
+    const allGames = getGames();
+    const game = allGames.find(g => g.id === gameId);
+    if (!game || !activeLeagueId) return;
+
+    const memberships = getLeagueMemberships();
+    const won = game.winner === 'player';
+
+    for (const [pid, delta] of Object.entries(game.eloChanges)) {
+      const idx = memberships.findIndex(m => m.leagueId === activeLeagueId && m.playerId === pid);
+      if (idx < 0) continue;
+      const m = memberships[idx];
+      const isOnWinningSide = game.playerIds.includes(pid) ? won : !won;
+      memberships[idx] = {
+        ...m,
+        elo: Math.max(0, m.elo - delta),
+        eloHistory: m.eloHistory.filter(e => e.gameId !== gameId),
+        wins: Math.max(0, m.wins - (isOnWinningSide ? 1 : 0)),
+        losses: Math.max(0, m.losses - (isOnWinningSide ? 0 : 1)),
+        gamesPlayed: Math.max(0, m.gamesPlayed - 1),
+        recentForm: m.recentForm.slice(0, -1) as ('W' | 'L')[],
+      };
+    }
+
+    saveLeagueMemberships(memberships);
+    const updated = allGames.filter(g => g.id !== gameId);
+    saveGames(updated);
+    setAllGames(updated);
+  }, [activeLeagueId]);
+
   const getUserGames = useCallback((userId: string) => {
     return games
       .filter(g => g.playerIds.includes(userId) || g.opponentIds.includes(userId))
@@ -183,6 +213,7 @@ export function useGames() {
     games,
     loading,
     logGame,
+    deleteGame,
     getUserGames,
     refreshGames,
   };

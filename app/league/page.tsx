@@ -10,7 +10,7 @@ import AddPlayerModal from '@/components/add-player-modal';
 
 export default function LeaguePage() {
   const { players, userId, loading, getOrCreatePlayer, refreshPlayers } = usePlayers();
-  const { activeLeague, loading: leagueLoading } = useLeague();
+  const { activeLeague, activeLeagueId, removePlayerFromLeague, loading: leagueLoading } = useLeague();
   const [showAddPlayer, setShowAddPlayer] = useState(false);
 
   if (loading || leagueLoading) {
@@ -89,6 +89,10 @@ export default function LeaguePage() {
             player={player}
             rank={i + 4}
             isUser={player.id === userId}
+            onRemove={player.id !== userId && activeLeagueId ? () => {
+              removePlayerFromLeague(activeLeagueId, player.id);
+              refreshPlayers();
+            } : undefined}
           />
         ))}
       </section>

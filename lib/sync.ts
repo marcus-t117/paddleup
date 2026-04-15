@@ -59,21 +59,23 @@ function getSharedSlice(leagueId: string): SharedSlice | null {
   return { league, memberships, games, players };
 }
 
-// Push the shared league's slice to the server. Fire-and-forget.
-export function pushShared(leagueId: string): void {
+// Push the shared league's slice to the server. Returns a promise so callers can await.
+export async function pushShared(leagueId: string): Promise<void> {
   if (typeof window === 'undefined') return;
   if (!isSharedLeagueId(leagueId)) return;
 
   const slice = getSharedSlice(leagueId);
   if (!slice) return;
 
-  fetch('/api/sync', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: leagueId, data: slice }),
-  }).catch(err => {
+  try {
+    await fetch('/api/sync', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: leagueId, data: slice }),
+    });
+  } catch (err) {
     console.warn('[paddleup shared] push failed', leagueId, err);
-  });
+  }
 }
 
 // Pull the shared league's slice from the server. Returns a discriminated result.
@@ -133,8 +135,11 @@ function isSharedSlice(v: unknown): v is SharedSlice {
   );
 }
 
-// Merge a server slice into localStorage using union-with-server-wins semantics.
-// Returns true if anything changed.
+// Merge a server slice into localStorage.
+// Memberships: higher gamesPlayed wins — prevents stale server data from rolling back local stats.
+// Games: union by ID — games are immutable once logged.
+// Players: union by ID — server wins on conflict.
+// Returns true always (kept for API compatibility).
 export function mergeSharedSlice(slice: SharedSlice): boolean {
   if (typeof window === 'undefined') return false;
   const leagueId = slice.league.id;
@@ -150,19 +155,24 @@ export function mergeSharedSlice(slice: SharedSlice): boolean {
   else leagues.push(mergedLeague);
   writeJSON(STORAGE_KEYS.LEAGUES, leagues);
 
-  // Memberships: union by (leagueId, playerId), server wins on conflict for this leagueId
+  // Memberships: higher gamesPlayed wins (protects newer local stats from being overwritten)
   const allMemberships = readJSON<LeagueMembership[]>(STORAGE_KEYS.LEAGUE_MEMBERSHIPS) || [];
-  const serverKeys = new Set(slice.memberships.map(m => `${m.leagueId}:${m.playerId}`));
-  const filtered = allMemberships.filter(
-    m => m.leagueId !== leagueId || !serverKeys.has(`${m.leagueId}:${m.playerId}`)
-  );
-  writeJSON(STORAGE_KEYS.LEAGUE_MEMBERSHIPS, [...filtered, ...slice.memberships]);
+  const localByKey = new Map(allMemberships.map(m => [`${m.leagueId}:${m.playerId}`, m]));
+  for (const serverM of slice.memberships) {
+    const key = `${serverM.leagueId}:${serverM.playerId}`;
+    const localM = localByKey.get(key);
+    // Take server if it has more (or equal) games — otherwise keep local
+    if (!localM || serverM.gamesPlayed >= localM.gamesPlayed) {
+      localByKey.set(key, serverM);
+    }
+  }
+  writeJSON(STORAGE_KEYS.LEAGUE_MEMBERSHIPS, Array.from(localByKey.values()));
 
-  // Games: union by id, server wins on conflict
+  // Games: union by id — keep all games from both sides
   const allGames = readJSON<Game[]>(STORAGE_KEYS.GAMES) || [];
-  const serverGameIds = new Set(slice.games.map(g => g.id));
-  const keptGames = allGames.filter(g => !serverGameIds.has(g.id));
-  writeJSON(STORAGE_KEYS.GAMES, [...keptGames, ...slice.games]);
+  const localGameIds = new Set(allGames.map(g => g.id));
+  const newGames = slice.games.filter(g => !localGameIds.has(g.id));
+  writeJSON(STORAGE_KEYS.GAMES, [...allGames, ...newGames]);
 
   // Players: union by id, server wins on conflict
   const allPlayers = readJSON<Player[]>(STORAGE_KEYS.PLAYERS) || [];

@@ -8,16 +8,18 @@ import MatchResultCard from '@/components/match-result-card';
 import BadgeUnlockCard from '@/components/badge-unlock-card';
 import { getWinRate } from '@/lib/utils';
 import { useLeague } from '@/contexts/league-context';
+import { SHARED_LEAGUES } from '@/lib/constants';
+import { pushShared } from '@/lib/sync';
 
 export default function LogPage() {
   const { players, currentUser, userId, loading: playersLoading, getOrCreatePlayer, refreshPlayers } = usePlayers();
-  const { games, logGame, getUserGames, loading: gamesLoading, refreshGames } = useGames();
+  const { games, logGame, deleteGame, getUserGames, loading: gamesLoading, refreshGames } = useGames();
   const { activeLeague } = useLeague();
   const [showModal, setShowModal] = useState(false);
   const [lastResult, setLastResult] = useState<{ eloDelta: number; newBadges: string[] } | null>(null);
 
-  const handleLogGame = useCallback((data: LogGameData) => {
-    if (!userId) return;
+  const handleLogGame = useCallback(async (data: LogGameData) => {
+    if (!userId || !activeLeague) return;
 
     const result = logGame(
       {
@@ -38,9 +40,14 @@ export default function LogPage() {
     refreshPlayers();
     refreshGames();
 
+    // Push to Redis immediately for shared leagues (don't wait for debounced scheduleSync)
+    if (SHARED_LEAGUES.some(l => l.id === activeLeague.id)) {
+      pushShared(activeLeague.id);
+    }
+
     // Clear result after 5 seconds
     setTimeout(() => setLastResult(null), 5000);
-  }, [userId, logGame, getOrCreatePlayer, refreshPlayers, refreshGames]);
+  }, [userId, activeLeague, logGame, getOrCreatePlayer, refreshPlayers, refreshGames]);
 
   if (playersLoading || gamesLoading || !currentUser || !userId) {
     return (
@@ -142,7 +149,13 @@ export default function LogPage() {
         <div className="space-y-3">
           {userGames.length > 0 ? (
             userGames.map(game => (
-              <MatchResultCard key={game.id} game={game} userId={userId} players={players} />
+              <MatchResultCard
+                key={game.id}
+                game={game}
+                userId={userId}
+                players={players}
+                onDelete={(gameId) => { deleteGame(gameId); refreshPlayers(); refreshGames(); }}
+              />
             ))
           ) : (
             <div className="bg-surface-container-low p-8 rounded-[1.5rem] text-center">

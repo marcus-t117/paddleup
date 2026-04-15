@@ -38,8 +38,9 @@ export function usePlayers() {
   }, []);
 
   // Resolve players with league-scoped stats
+  // isUser is derived from userId at read time so synced players never inherit another device's isUser flag
   const players = (() => {
-    if (!activeLeagueId) return allPlayers;
+    if (!activeLeagueId) return allPlayers.map(p => ({ ...p, isUser: p.id === userId }));
     const memberships = getLeagueMemberships().filter(m => m.leagueId === activeLeagueId);
     const memberIds = new Set(memberships.map(m => m.playerId));
 
@@ -47,7 +48,7 @@ export function usePlayers() {
       .filter(p => memberIds.has(p.id))
       .map(p => {
         const m = memberships.find(m => m.playerId === p.id);
-        return overlayMembership(p, m);
+        return { ...overlayMembership(p, m), isUser: p.id === userId };
       });
   })();
 

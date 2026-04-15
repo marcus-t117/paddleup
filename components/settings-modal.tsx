@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { resetAll } from '@/lib/storage';
+import { mergePlayers } from '@/lib/player-merge';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,6 +11,10 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [confirmReset, setConfirmReset] = useState(false);
+  const [mergeFrom, setMergeFrom] = useState('');
+  const [mergeTo, setMergeTo] = useState('');
+  const [mergeResult, setMergeResult] = useState<string | null>(null);
+  const [merging, setMerging] = useState(false);
 
   if (!isOpen) return null;
 
@@ -18,11 +23,24 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     window.location.reload();
   };
 
+  const handleMerge = () => {
+    if (!mergeFrom.trim() || !mergeTo.trim()) return;
+    setMerging(true);
+    const result = mergePlayers(mergeFrom.trim(), mergeTo.trim());
+    setMergeResult(result);
+    setMerging(false);
+
+    if (result.includes('Merged')) {
+      // Give the push a moment to land before reloading
+      setTimeout(() => window.location.reload(), 1500);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center">
       <div className="absolute inset-0 bg-inverse-surface/40 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full max-w-lg bg-surface-container-lowest rounded-t-[2rem] p-6 pb-10 shadow-[0_-8px_32px_rgba(0,0,0,0.1)]">
+      <div className="relative w-full max-w-lg bg-surface-container-lowest rounded-t-[2rem] p-6 pb-10 shadow-[0_-8px_32px_rgba(0,0,0,0.1)] max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-extrabold font-[family-name:var(--font-headline)] tracking-tight">
             Settings
@@ -33,6 +51,57 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         <div className="space-y-4">
+          {/* Merge Players */}
+          <div className="p-4 rounded-[1rem] bg-surface-container-low space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-on-surface-variant">merge</span>
+              <div>
+                <span className="font-bold block text-sm">Merge Players</span>
+                <span className="text-xs text-on-surface-variant">Re-attribute all games from one player to another</span>
+              </div>
+            </div>
+            {mergeResult ? (
+              <p className={`text-sm font-medium p-3 rounded-[0.75rem] ${
+                mergeResult.includes('Merged')
+                  ? 'bg-primary-container text-on-primary-container'
+                  : 'bg-error/10 text-error'
+              }`}>
+                {mergeResult}
+              </p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={mergeFrom}
+                    onChange={e => setMergeFrom(e.target.value)}
+                    placeholder="Existing player name (e.g. Alex)"
+                    className="w-full bg-surface-container-highest p-3 rounded-[0.75rem] text-on-surface text-sm font-medium outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline"
+                  />
+                  <div className="flex items-center gap-2 text-on-surface-variant">
+                    <div className="flex-1 h-px bg-surface-container-highest" />
+                    <span className="material-symbols-outlined text-sm">arrow_downward</span>
+                    <div className="flex-1 h-px bg-surface-container-highest" />
+                  </div>
+                  <input
+                    type="text"
+                    value={mergeTo}
+                    onChange={e => setMergeTo(e.target.value)}
+                    placeholder="Merge into (e.g. Alex N)"
+                    className="w-full bg-surface-container-highest p-3 rounded-[0.75rem] text-on-surface text-sm font-medium outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline"
+                  />
+                </div>
+                <button
+                  onClick={handleMerge}
+                  disabled={!mergeFrom.trim() || !mergeTo.trim() || merging}
+                  className="w-full py-3 rounded-full font-bold text-sm uppercase tracking-widest bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Merge
+                </button>
+              </>
+            )}
+          </div>
+
           {/* Reset */}
           {!confirmReset ? (
             <button

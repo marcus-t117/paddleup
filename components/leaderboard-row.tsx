@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import type { Player } from '@/types';
 import { getInitials, getAvatarColour } from '@/lib/utils';
 
@@ -7,9 +8,25 @@ interface LeaderboardRowProps {
   player: Player;
   rank: number;
   isUser: boolean;
+  onRemove?: () => void;
 }
 
-export default function LeaderboardRow({ player, rank, isUser }: LeaderboardRowProps) {
+export default function LeaderboardRow({ player, rank, isUser, onRemove }: LeaderboardRowProps) {
+  const [confirming, setConfirming] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout>(null);
+
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
+
+  const handleRemoveClick = () => {
+    if (confirming) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setConfirming(false);
+      onRemove?.();
+    } else {
+      setConfirming(true);
+      timeoutRef.current = setTimeout(() => setConfirming(false), 3000);
+    }
+  };
   if (isUser) {
     return (
       <div className="bg-primary-container rounded-[1.5rem] p-4 flex items-center gap-3 shadow-lg shadow-primary-container/20">
@@ -64,13 +81,31 @@ export default function LeaderboardRow({ player, rank, isUser }: LeaderboardRowP
           ))}
         </div>
       </div>
-      <div className="text-right">
-        <span className="text-lg font-bold font-[family-name:var(--font-headline)] text-on-surface">
-          {player.elo.toLocaleString()}
-        </span>
-        <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-          {player.recentForm.join('')}
+      <div className="text-right flex items-center gap-2">
+        <div>
+          <span className="text-lg font-bold font-[family-name:var(--font-headline)] text-on-surface">
+            {player.elo.toLocaleString()}
+          </span>
+          <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+            {player.recentForm.join('')}
+          </div>
         </div>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={handleRemoveClick}
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+              confirming
+                ? 'bg-error text-on-error'
+                : 'bg-surface-container-high text-on-surface-variant hover:bg-error/20 hover:text-error'
+            }`}
+            title={confirming ? 'Tap again to remove from league' : 'Remove from league'}
+          >
+            <span className="material-symbols-outlined text-sm">
+              {confirming ? 'warning' : 'person_remove'}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

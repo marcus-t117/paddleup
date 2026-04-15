@@ -4,10 +4,31 @@ import { useState, useEffect, useRef } from 'react';
 import type { Game, Player } from '@/types';
 import { formatDateTime, getInitials, getAvatarColour, getEloTier } from '@/lib/utils';
 
+function useConfirmClick(onConfirm: () => void) {
+  const [confirming, setConfirming] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout>(null);
+
+  const handleClick = () => {
+    if (confirming) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setConfirming(false);
+      onConfirm();
+    } else {
+      setConfirming(true);
+      timeoutRef.current = setTimeout(() => setConfirming(false), 3000);
+    }
+  };
+
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
+
+  return { confirming, handleClick };
+}
+
 interface MatchResultCardProps {
   game: Game;
   userId: string;
   players: Player[];
+  onDelete?: (gameId: string) => void;
 }
 
 function TappableAvatar({ player, className }: { player: Player; className?: string }) {
@@ -46,7 +67,11 @@ function TappableAvatar({ player, className }: { player: Player; className?: str
   );
 }
 
-export default function MatchResultCard({ game, userId, players }: MatchResultCardProps) {
+export default function MatchResultCard({ game, userId, players, onDelete }: MatchResultCardProps) {
+  const { confirming: deleteConfirming, handleClick: handleDeleteClick } = useConfirmClick(
+    () => onDelete?.(game.id)
+  );
+
   const isOnPlayerSide = game.playerIds.includes(userId);
   const won = (isOnPlayerSide && game.winner === 'player') || (!isOnPlayerSide && game.winner === 'opponent');
 
@@ -77,15 +102,33 @@ export default function MatchResultCard({ game, userId, players }: MatchResultCa
             {formatDateTime(game.date)}
           </p>
         </div>
-        <div className="text-right">
-          <span className={`block text-xl font-black font-[family-name:var(--font-headline)] leading-none ${
-            won ? 'text-primary' : 'text-on-surface-variant'
-          }`}>
-            {myScore} - {theirScore}
-          </span>
-          <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-            Final Score
-          </span>
+        <div className="text-right flex items-center gap-3">
+          <div>
+            <span className={`block text-xl font-black font-[family-name:var(--font-headline)] leading-none ${
+              won ? 'text-primary' : 'text-on-surface-variant'
+            }`}>
+              {myScore} - {theirScore}
+            </span>
+            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+              Final Score
+            </span>
+          </div>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={handleDeleteClick}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                deleteConfirming
+                  ? 'bg-error text-on-error'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-error/20 hover:text-error'
+              }`}
+              title={deleteConfirming ? 'Tap again to confirm delete' : 'Delete match'}
+            >
+              <span className="material-symbols-outlined text-sm">
+                {deleteConfirming ? 'warning' : 'delete'}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
