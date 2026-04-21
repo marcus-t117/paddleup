@@ -162,7 +162,7 @@ export function mergeSharedSlice(slice: SharedSlice): boolean {
     const key = `${serverM.leagueId}:${serverM.playerId}`;
     const localM = localByKey.get(key);
     // Take server if it has more (or equal) games — otherwise keep local
-    if (!localM || serverM.gamesPlayed >= localM.gamesPlayed) {
+    if (!localM || serverM.gamesPlayed > localM.gamesPlayed) {
       localByKey.set(key, serverM);
     }
   }

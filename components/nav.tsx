@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLeague } from '@/contexts/league-context';
 
 const tabs = [
   { href: '/', label: 'Dashboard', icon: 'sports_tennis' },
@@ -12,9 +13,22 @@ const tabs = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const { syncState, refreshSharedLeagues } = useLeague();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 pb-3 pt-2 bg-surface-container-lowest/80 backdrop-blur-[24px] rounded-t-[1.5rem] shadow-[0_-8px_32px_rgba(0,0,0,0.06)]">
+      {/* Sync indicator */}
+      <button
+        onClick={() => refreshSharedLeagues()}
+        title="Sync now"
+        className="absolute top-2 right-3 flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
+      >
+        <span
+          className={`material-symbols-outlined text-[14px] ${syncState === 'syncing' ? 'animate-spin text-primary' : syncState === 'error' ? 'text-error' : 'text-outline'}`}
+        >
+          sync
+        </span>
+      </button>
       {tabs.map(tab => {
         const isActive = pathname === tab.href;
 

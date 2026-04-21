@@ -23,6 +23,9 @@ interface LeagueContextValue {
   addMembersToLeague: (leagueId: string, playerIds: string[]) => void;
   removePlayerFromLeague: (leagueId: string, playerId: string) => void;
   loading: boolean;
+  syncVersion: number;
+  syncState: 'idle' | 'syncing' | 'error';
+  refreshSharedLeagues: () => Promise<void>;
 }
 
 const LeagueContext = createContext<LeagueContextValue | null>(null);
@@ -31,6 +34,23 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [activeLeagueId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncVersion, setSyncVersion] = useState(0);
+  const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'error'>('idle');
+
+  const refreshSharedLeagues = useCallback(async () => {
+    setSyncState('syncing');
+    let anySuccess = false;
+    for (const shared of SHARED_LEAGUES) {
+      const result = await pullShared(shared.id);
+      if (result.ok) {
+        mergeSharedSlice(result.slice);
+        setLeagues(getLeagues());
+        anySuccess = true;
+      }
+    }
+    setSyncState(anySuccess ? 'idle' : 'error');
+    if (anySuccess) setSyncVersion(v => v + 1);
+  }, []);
 
   useEffect(() => {
     const data = initialize();
@@ -39,21 +59,11 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
     setActiveId(storedActive || data.leagues[0]?.id || null);
     setLoading(false);
 
-    let cancelled = false;
-
-    async function refreshSharedLeagues() {
-      for (const shared of SHARED_LEAGUES) {
-        const result = await pullShared(shared.id);
-        if (cancelled) return;
-        if (result.ok) {
-          mergeSharedSlice(result.slice);
-          setLeagues(getLeagues());
-        }
-      }
-    }
-
     // Boot pull
     refreshSharedLeagues();
+
+    // Poll every 30 seconds while app is open
+    const pollId = setInterval(() => refreshSharedLeagues(), 30_000);
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') refreshSharedLeagues();
@@ -62,11 +72,11 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
     window.addEventListener('focus', refreshSharedLeagues);
 
     return () => {
-      cancelled = true;
+      clearInterval(pollId);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', refreshSharedLeagues);
     };
-  }, []);
+  }, [refreshSharedLeagues]);
 
   const activeLeague = leagues.find(l => l.id === activeLeagueId) || null;
 
@@ -172,6 +182,9 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
       addMembersToLeague,
       removePlayerFromLeague,
       loading,
+      syncVersion,
+      syncState,
+      refreshSharedLeagues,
     }}>
       {children}
     </LeagueContext.Provider>

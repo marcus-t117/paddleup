@@ -22,12 +22,12 @@ interface LogGameInput {
 export function useGames() {
   const [allGames, setAllGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const { activeLeagueId } = useLeague();
+  const { activeLeagueId, syncVersion } = useLeague();
 
   useEffect(() => {
     setAllGames(getGames());
     setLoading(false);
-  }, []);
+  }, [syncVersion]);
 
   // Games scoped to active league
   const games = activeLeagueId

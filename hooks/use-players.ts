@@ -28,14 +28,14 @@ export function usePlayers() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { activeLeagueId } = useLeague();
+  const { activeLeagueId, syncVersion } = useLeague();
 
   useEffect(() => {
     const data = initialize();
     setAllPlayers(data.players);
     setUserId(data.userId);
     setLoading(false);
-  }, []);
+  }, [syncVersion]);
 
   // Resolve players with league-scoped stats
   // isUser is derived from userId at read time so synced players never inherit another device's isUser flag
