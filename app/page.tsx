@@ -14,27 +14,29 @@ import { BADGES } from '@/lib/badges';
 import { getBadgeStyle } from '@/components/badge-circle';
 import LeagueSwitcher from '@/components/league-switcher';
 import { useLeague } from '@/contexts/league-context';
-import { getLeagueMemberships } from '@/lib/storage';
 
 export default function Dashboard() {
   const { players, currentUser, userId, loading: playersLoading } = usePlayers();
   const [showEloChart, setShowEloChart] = useState(false);
   const { games, getUserGames, loading: gamesLoading } = useGames();
-  const { leagues, setActiveLeagueId, loading: leagueLoading } = useLeague();
+  const { loading: leagueLoading } = useLeague();
 
-  // If loaded but user isn't in the active league, silently switch to their home league
-  useEffect(() => {
-    if (playersLoading || gamesLoading || leagueLoading) return;
-    if (currentUser || !userId) return;
-    const memberships = getLeagueMemberships();
-    const homeLeague = leagues.find(l => memberships.some(m => m.leagueId === l.id && m.playerId === userId));
-    if (homeLeague) setActiveLeagueId(homeLeague.id);
-  }, [playersLoading, gamesLoading, leagueLoading, currentUser, userId, leagues, setActiveLeagueId]);
-
-  if (playersLoading || gamesLoading || leagueLoading || !currentUser || !userId) {
+  if (playersLoading || gamesLoading || leagueLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!currentUser || !userId) {
+    return (
+      <div className="space-y-8 pb-8">
+        <section><LeagueSwitcher /></section>
+        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center gap-3">
+          <span className="material-symbols-outlined text-4xl text-on-surface-variant">sports_tennis</span>
+          <p className="text-on-surface-variant font-medium text-sm">Switch to your league to see your stats.</p>
+        </div>
       </div>
     );
   }
