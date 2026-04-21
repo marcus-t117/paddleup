@@ -21,10 +21,33 @@ export default function Dashboard() {
   const { games, getUserGames, loading: gamesLoading } = useGames();
   const { loading: leagueLoading } = useLeague();
 
-  if (playersLoading || gamesLoading || leagueLoading || !currentUser || !userId) {
+  if (playersLoading || gamesLoading || leagueLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!currentUser || !userId) {
+    return (
+      <div className="space-y-6 pb-8">
+        <section><LeagueSwitcher /></section>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-6 gap-4">
+          <span className="material-symbols-outlined text-5xl text-on-surface-variant">leaderboard</span>
+          <h2 className="text-2xl font-extrabold font-[family-name:var(--font-headline)] tracking-tight text-on-surface">
+            Browse Mode
+          </h2>
+          <p className="text-on-surface-variant text-sm max-w-xs">
+            You&apos;re not a member of this league. Switch to your league to see your stats and log games.
+          </p>
+          <Link
+            href="/league"
+            className="mt-2 bg-primary text-on-primary px-6 py-3 rounded-full font-bold text-sm uppercase tracking-widest"
+          >
+            View Leaderboard
+          </Link>
+        </div>
       </div>
     );
   }
