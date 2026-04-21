@@ -1,7 +1,7 @@
 import type { Player, Game, League, LeagueMembership } from '@/types';
 import { STORAGE_KEYS, DATA_VERSION, STARTING_ELO, SHARED_LEAGUES } from './constants';
 import { generateSampleData } from './sample-data';
-import { pushShared } from './sync';
+import { pushShared, mergeSharedSlice, type SharedSlice } from './sync';
 
 function getItem<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -285,6 +285,22 @@ export function upsertMembership(membership: LeagueMembership): void {
     all.push(membership);
   }
   saveLeagueMemberships(all);
+}
+
+// Claim an existing player from a shared league as the current user.
+// Used when someone selects their name on the setup screen instead of creating new.
+export function claimExistingUser(playerId: string, slice: SharedSlice): void {
+  resetAll();
+  mergeSharedSlice(slice);
+
+  // Mark only the claimed player as isUser
+  const players = getPlayers().map(p => ({ ...p, isUser: p.id === playerId }));
+  setItem(STORAGE_KEYS.PLAYERS, players);
+
+  setItem(STORAGE_KEYS.USER_ID, playerId);
+  setItem(STORAGE_KEYS.ACTIVE_LEAGUE, slice.league.id);
+  setItem(STORAGE_KEYS.INITIALIZED, true);
+  setItem(STORAGE_KEYS.VERSION, DATA_VERSION);
 }
 
 // Reset

@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import type { Player } from '@/types';
+import type { SharedSlice } from '@/lib/sync';
+import { SHARED_LEAGUES } from '@/lib/constants';
 
 interface SetupScreenProps {
   onComplete: () => void;
@@ -10,6 +13,31 @@ export default function SetupScreen({ onComplete }: SetupScreenProps) {
   const [step, setStep] = useState<'name' | 'league'>('name');
   const [name, setName] = useState('');
   const [leagueName, setLeagueName] = useState('');
+  const [existingPlayers, setExistingPlayers] = useState<Player[] | null>(null);
+  const [sharedSlice, setSharedSlice] = useState<SharedSlice | null>(null);
+
+  useEffect(() => {
+    const sharedLeagueId = SHARED_LEAGUES[0]?.id;
+    if (!sharedLeagueId) return;
+
+    import('@/lib/sync').then(({ pullShared }) =>
+      pullShared(sharedLeagueId).then(result => {
+        if (result.ok && result.slice.players.length > 0) {
+          setExistingPlayers(result.slice.players);
+          setSharedSlice(result.slice);
+        } else {
+          setExistingPlayers([]);
+        }
+      })
+    );
+  }, []);
+
+  const handleSelectExisting = async (player: Player) => {
+    if (!sharedSlice) return;
+    const { claimExistingUser } = await import('@/lib/storage');
+    claimExistingUser(player.id, sharedSlice);
+    onComplete();
+  };
 
   const handleNext = () => {
     if (step === 'name' && name.trim()) {
@@ -19,10 +47,8 @@ export default function SetupScreen({ onComplete }: SetupScreenProps) {
 
   const handleSubmit = async () => {
     if (!name.trim() || !leagueName.trim()) return;
-
     const { initializeWithSetup } = await import('@/lib/storage');
     initializeWithSetup(name.trim(), leagueName.trim());
-
     onComplete();
   };
 
@@ -40,17 +66,49 @@ export default function SetupScreen({ onComplete }: SetupScreenProps) {
 
       {step === 'name' && (
         <div className="w-full max-w-sm space-y-6">
+
+          {/* Existing players — show when loaded and available */}
+          {existingPlayers && existingPlayers.length > 0 && (
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant block">
+                Who are you?
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {existingPlayers.map(player => (
+                  <button
+                    key={player.id}
+                    onClick={() => handleSelectExisting(player)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-primary hover:text-on-primary transition-colors active:scale-[0.97]"
+                  >
+                    <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">
+                      {player.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+                    </span>
+                    {player.name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex-1 h-px bg-outline-variant" />
+                <span className="text-xs text-on-surface-variant font-medium">or add yourself</span>
+                <div className="flex-1 h-px bg-outline-variant" />
+              </div>
+            </div>
+          )}
+
+          {/* New user name input */}
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant block mb-2">
-              Your Name
-            </label>
+            {(!existingPlayers || existingPlayers.length === 0) && (
+              <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant block mb-2">
+                Your Name
+              </label>
+            )}
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleNext()}
               placeholder="How should we call you?"
-              autoFocus
+              autoFocus={!existingPlayers || existingPlayers.length === 0}
               className="w-full bg-surface-container-highest p-4 rounded-[0.75rem] text-on-surface font-medium text-lg outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline"
             />
           </div>
