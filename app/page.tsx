@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePlayers } from '@/hooks/use-players';
 import { useGames } from '@/hooks/use-games';
 import EloHero from '@/components/elo-hero';
@@ -29,23 +29,23 @@ export default function Dashboard() {
     );
   }
 
-  if (!currentUser || !userId) {
+  // Fall back to first league player when viewing a league the real user isn't in (e.g. demo league)
+  const displayUser = currentUser ?? players[0] ?? null;
+  const displayUserId = displayUser?.id ?? null;
+
+  if (!displayUser || !displayUserId) {
     return (
-      <div className="space-y-8 pb-8">
-        <section><LeagueSwitcher /></section>
-        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center gap-3">
-          <span className="material-symbols-outlined text-4xl text-on-surface-variant">sports_tennis</span>
-          <p className="text-on-surface-variant font-medium text-sm">Switch to your league to see your stats.</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
 
-  const userGames = getUserGames(userId);
+  const userGames = getUserGames(displayUserId);
   const recentGames = userGames.slice(0, 3);
-  const winRate = getWinRate(currentUser);
+  const winRate = getWinRate(displayUser);
   const totalBadges = BADGES.length;
-  const unlockedBadges = currentUser.badges.length;
+  const unlockedBadges = displayUser.badges.length;
 
   return (
     <div className="space-y-8 pb-8">
@@ -60,22 +60,22 @@ export default function Dashboard() {
           Welcome Back, Champ
         </span>
         <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-[family-name:var(--font-headline)]">
-          {currentUser.name}
+          {displayUser.name}
         </h1>
       </section>
 
       {/* Bento Stats Grid */}
       <section className="grid grid-cols-2 gap-4">
         <div className="col-span-2 cursor-pointer" onClick={() => setShowEloChart(true)}>
-          <EloHero player={currentUser} allPlayers={players} />
+          <EloHero player={displayUser} allPlayers={players} />
         </div>
         <StatCard
           label="Match Wins"
-          value={currentUser.wins}
-          subtitle={`/ ${currentUser.gamesPlayed}`}
-          progress={currentUser.gamesPlayed > 0 ? winRate : 0}
+          value={displayUser.wins}
+          subtitle={`/ ${displayUser.gamesPlayed}`}
+          progress={displayUser.gamesPlayed > 0 ? winRate : 0}
         />
-        <StreakCard streak={currentUser.currentStreak} />
+        <StreakCard streak={displayUser.currentStreak} />
       </section>
 
       {/* Recent Activity */}
@@ -91,7 +91,7 @@ export default function Dashboard() {
         <div className="space-y-3">
           {recentGames.length > 0 ? (
             recentGames.map(game => (
-              <ActivityItem key={game.id} game={game} userId={userId} players={players} />
+              <ActivityItem key={game.id} game={game} userId={displayUserId} players={players} />
             ))
           ) : (
             <div className="bg-surface-container-low p-8 rounded-[1.5rem] text-center">
@@ -111,9 +111,9 @@ export default function Dashboard() {
       {/* Next Badge Tracker */}
       {(() => {
         const lockedWithProgress = BADGES
-          .filter(b => !currentUser.badges.includes(b.id) && b.progress)
+          .filter(b => !displayUser.badges.includes(b.id) && b.progress)
           .map(b => {
-            const p = b.progress!(currentUser, games);
+            const p = b.progress!(displayUser, games);
             return { badge: b, current: p.current, target: p.target, percent: (p.current / p.target) * 100 };
           })
           .filter(b => b.percent > 0)
@@ -192,8 +192,8 @@ export default function Dashboard() {
       </section>
 
       {/* ELO Chart Modal */}
-      {showEloChart && currentUser.eloHistory.length >= 2 && (
-        <EloChart history={currentUser.eloHistory} onClose={() => setShowEloChart(false)} />
+      {showEloChart && displayUser.eloHistory.length >= 2 && (
+        <EloChart history={displayUser.eloHistory} onClose={() => setShowEloChart(false)} />
       )}
     </div>
   );
