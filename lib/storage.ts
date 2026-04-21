@@ -2,6 +2,7 @@ import type { Player, Game, League, LeagueMembership } from '@/types';
 import { STORAGE_KEYS, DATA_VERSION, STARTING_ELO, SHARED_LEAGUES } from './constants';
 import { generateSampleData } from './sample-data';
 import { pushShared, mergeSharedSlice, type SharedSlice } from './sync';
+import { DEMO_LEAGUE_ID, DEMO_LEAGUE, DEMO_PLAYERS, DEMO_MEMBERSHIPS, DEMO_GAMES } from './demo-league';
 
 function getItem<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -52,6 +53,7 @@ export function initialize(): {
 } {
   if (isInitialized()) {
     ensureSharedLeaguePlaceholders();
+    ensureDemoLeague();
     return {
       players: getPlayers(),
       games: getGames(),
@@ -287,6 +289,27 @@ export function upsertMembership(membership: LeagueMembership): void {
   saveLeagueMemberships(all);
 }
 
+// Inject demo league data if not already present. Idempotent — safe to call on every boot.
+function ensureDemoLeague(): void {
+  const leagues = getLeagues();
+  if (leagues.some(l => l.id === DEMO_LEAGUE_ID)) return;
+
+  const players = getPlayers();
+  const memberships = getLeagueMemberships();
+  const games = getGames();
+
+  const newPlayerIds = new Set(players.map(p => p.id));
+  const newPlayers = DEMO_PLAYERS.filter(p => !newPlayerIds.has(p.id));
+
+  setItem(STORAGE_KEYS.LEAGUES, [...leagues, DEMO_LEAGUE]);
+  setItem(STORAGE_KEYS.PLAYERS, [...players, ...newPlayers]);
+  setItem(STORAGE_KEYS.LEAGUE_MEMBERSHIPS, [...memberships, ...DEMO_MEMBERSHIPS]);
+
+  const existingGameIds = new Set(games.map(g => g.id));
+  const newGames = DEMO_GAMES.filter(g => !existingGameIds.has(g.id));
+  setItem(STORAGE_KEYS.GAMES, [...games, ...newGames]);
+}
+
 // Claim an existing player from a shared league as the current user.
 // Used when someone selects their name on the setup screen instead of creating new.
 export function claimExistingUser(playerId: string, slice: SharedSlice): void {
@@ -301,6 +324,7 @@ export function claimExistingUser(playerId: string, slice: SharedSlice): void {
   setItem(STORAGE_KEYS.ACTIVE_LEAGUE, slice.league.id);
   setItem(STORAGE_KEYS.INITIALIZED, true);
   setItem(STORAGE_KEYS.VERSION, DATA_VERSION);
+  ensureDemoLeague();
 }
 
 // Reset
