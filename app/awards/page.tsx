@@ -8,10 +8,10 @@ import BadgeCircle from '@/components/badge-circle';
 import BadgeProgress from '@/components/badge-progress';
 
 export default function AwardsPage() {
-  const { currentUser, loading: playersLoading } = usePlayers();
+  const { currentUser, players, loading: playersLoading } = usePlayers();
   const { games, loading: gamesLoading } = useGames();
 
-  if (playersLoading || gamesLoading || !currentUser) {
+  if (playersLoading || gamesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -19,12 +19,22 @@ export default function AwardsPage() {
     );
   }
 
-  const level = getLevel(currentUser.xp);
+  const displayUser = currentUser ?? players[0] ?? null;
+
+  if (!displayUser) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  const level = getLevel(displayUser.xp);
   const title = getLevelTitle(level);
-  const progress = getLevelProgress(currentUser.xp);
+  const progress = getLevelProgress(displayUser.xp);
   const nextTitle = getLevelTitle(level + 1);
 
-  const unlockedBadgeIds = new Set(currentUser.badges);
+  const unlockedBadgeIds = new Set(displayUser.badges);
   const unlockedBadges = BADGES.filter(b => unlockedBadgeIds.has(b.id));
   const lockedBadges = BADGES.filter(b => !unlockedBadgeIds.has(b.id));
 
@@ -43,7 +53,7 @@ export default function AwardsPage() {
             {title}
           </h1>
           <span className="text-xl font-bold text-on-surface-variant">
-            {currentUser.xp.toLocaleString()} <span className="text-sm">XP</span>
+            {displayUser.xp.toLocaleString()} <span className="text-sm">XP</span>
           </span>
         </div>
 
@@ -79,7 +89,7 @@ export default function AwardsPage() {
             </h3>
             <p className="text-on-surface-variant text-sm font-medium mb-4">{targetBadge.description}.</p>
             {targetBadge.progress && (() => {
-              const p = targetBadge.progress!(currentUser, games);
+              const p = targetBadge.progress!(displayUser, games);
               return (
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Progress</span>
@@ -132,7 +142,7 @@ export default function AwardsPage() {
           {lockedBadges
             .filter(b => b.progress)
             .map(badge => (
-              <BadgeProgress key={badge.id} badge={badge} player={currentUser} games={games} />
+              <BadgeProgress key={badge.id} badge={badge} player={displayUser} games={games} />
             ))}
         </section>
       )}

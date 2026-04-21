@@ -49,7 +49,7 @@ export default function LogPage() {
     setTimeout(() => setLastResult(null), 5000);
   }, [userId, activeLeague, logGame, getOrCreatePlayer, refreshPlayers, refreshGames]);
 
-  if (playersLoading || gamesLoading || !currentUser || !userId) {
+  if (playersLoading || gamesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -57,8 +57,20 @@ export default function LogPage() {
     );
   }
 
-  const userGames = getUserGames(userId);
-  const winRate = getWinRate(currentUser);
+  const displayUser = currentUser ?? players[0] ?? null;
+  const displayUserId = displayUser?.id ?? null;
+  const isDemo = !currentUser;
+
+  if (!displayUser || !displayUserId) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  const userGames = getUserGames(displayUserId);
+  const winRate = getWinRate(displayUser);
 
   return (
     <div className="space-y-6 pb-8">
@@ -76,13 +88,15 @@ export default function LogPage() {
               Logging to: {activeLeague.name}
             </span>
           )}
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-primary-fixed text-on-primary-fixed px-8 py-3 rounded-full font-bold text-sm uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
-          >
-            <span className="material-symbols-outlined text-lg">add_circle</span>
-            Log New Match
-          </button>
+          {!isDemo && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-primary-fixed text-on-primary-fixed px-8 py-3 rounded-full font-bold text-sm uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-lg">add_circle</span>
+              Log New Match
+            </button>
+          )}
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary-container/15 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-4 w-16 h-16 border-4 border-primary-container/20 rounded-full" />
@@ -123,9 +137,9 @@ export default function LogPage() {
           </span>
           <div className="flex items-center gap-2">
             <span className="text-4xl font-extrabold font-[family-name:var(--font-headline)] text-on-surface">
-              {Math.abs(currentUser.currentStreak)}
+              {Math.abs(displayUser.currentStreak)}
             </span>
-            {currentUser.currentStreak > 0 && (
+            {displayUser.currentStreak > 0 && (
               <span className="material-symbols-outlined text-tertiary text-2xl icon-filled">
                 local_fire_department
               </span>
@@ -152,9 +166,9 @@ export default function LogPage() {
               <MatchResultCard
                 key={game.id}
                 game={game}
-                userId={userId}
+                userId={displayUserId}
                 players={players}
-                onDelete={(gameId) => { deleteGame(gameId); refreshPlayers(); refreshGames(); }}
+                onDelete={isDemo ? undefined : (gameId) => { deleteGame(gameId); refreshPlayers(); refreshGames(); }}
               />
             ))
           ) : (
